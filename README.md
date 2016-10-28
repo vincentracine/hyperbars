@@ -14,13 +14,13 @@ into this:
 ```js
 (function (state) {
 	var context = state || {};
-	return [h('div', {}, ['', (function (parent) {
+	return [h('div', {}, [(function (parent) {
 		var target = parent['profile'];
 		var context = Object.prototype.toString.call(target) === '[object Object]' ? target : parent;
 		if (!!target) {
-			return [, '    ', '' + context.name, '',]
+			return [null, '    ', '' + context.name, null]
 		}
-	})(context), ''])][0];
+	})(context)])][0];
 })
 ```
 then you can call the returned function with a state object (`createElement` is a [virtual-dom](https://github.com/Matt-Esch/virtual-dom/tree/master/vdom) function):
