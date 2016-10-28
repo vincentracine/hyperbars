@@ -1,0 +1,32 @@
+{
+  "name": "hyperbars",
+  "version": "0.0.1",
+  "description": "Compiles handlebar template to hyperscript so it can be used with virtual-dom",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vincentracine/hyperbars.git"
+  },
+  "keywords": [
+    "handlebars",
+    "hyperscript",
+    "virtual-dom",
+    "compile",
+    "compiler",
+    "html",
+    "template",
+    "mustache"
+  ],
+  "author": "Vincent Racine",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vincentracine/hyperbars/issues"
+  },
+  "homepage": "https://github.com/vincentracine/hyperbars#readme"
+}
