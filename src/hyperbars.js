@@ -53,7 +53,6 @@
 				}
 
 				text = text.filter(Boolean);
-				console.log(text);
 
 				text.forEach(function(text){
 					var node = {
@@ -134,24 +133,6 @@
 			 * @returns {*}
 			 */
 			var text2js = function(vtext){
-				var content = vtext.content;
-				var _if = content.indexOf('{{#if'),
-					_unless = content.indexOf('{{#unless'),
-					_ifClose = content.indexOf('{{/if'),
-					_unlessClose = content.indexOf('{{/unless');
-
-				if(_if > -1){
-					return "!!state['" + content.slice(_if+6, content.indexOf('}}')).trim() + "']?";
-				}
-
-				if(_unless > -1){
-					return "!!!state['" + content.slice(_if+10, content.indexOf('}}')).trim() + "']?";
-				}
-
-				if(_ifClose != -1 || _unlessClose != -1)
-					return ':null,';
-
-				// Output content
 				return string2js(vtext.content);
 			};
 
@@ -164,20 +145,20 @@
 
 				// Close function
 				if(expression.indexOf('{{/if') > -1 || expression.indexOf('{{/unless') > -1)
-					return ']}})(context)';
+					return 'null]}})(context)';
 				if(expression.indexOf('{{/each') > -1)
-					return "]})})(context)";
+					return "null]})})(context)";
 
 				// Open function
 				var $ops = {
 					'if': function(a, options){
-						return "(function(parent){var target=parent['" + a + "']"+ (options||"") +";var context=Object.prototype.toString.call(target)==='[object Object]'?target:parent;if(!!target){return [";
+						return "(function(parent){var target=parent['" + a + "']"+ (options||"") +";var context=Object.prototype.toString.call(target)==='[object Object]'?target:parent;if(!!target){return [null";
 					},
 					'unless': function(a, options){
-						return "(function(parent){var target=parent['" + a + "']"+ (options||"") +";var context=Object.prototype.toString.call(target)==='[object Object]'?target:parent;if(!target){return [";
+						return "(function(parent){var target=parent['" + a + "']"+ (options||"") +";var context=Object.prototype.toString.call(target)==='[object Object]'?target:parent;if(!target){return [null";
 					},
 					'each': function(a, options){
-						return "(function(parent){var context=parent; return context['" + a + "']"+ (options||"") +".map(function(context){context.parent = parent;return [";
+						return "(function(parent){var context=parent; return context['" + a + "']"+ (options||"") +".map(function(context){context.parent = parent;return [null";
 					}
 				};
 				var whitespace = expression.indexOf(' '),
