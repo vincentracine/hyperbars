@@ -2,56 +2,22 @@
  * Hyperbars version 0.0.1
  *
  * Copyright (c) 2016 Vincent Racine
- *
  * @license MIT
  */
-
 (function(Hyperbars){
 
 	'use strict';
 
-	var extend = function(target, more) {
-		if (target && more) for (var i in more) if (more.hasOwnProperty(i)) target[i] = more[i];
-		return target;
-	};
-
-	function VNode(tagName, attributes, children){
-		this.simple = true;
-		this.tagName = tagName;
-		this.attributes = attributes;
-		this.children = new VTree(children);
-	}
-	function VText(text, config) {
-		this.virtual = true;
-		extend(this, config);
-
-		// Non-overridable
-		this.text = [].concat(text);
-		this.textOnly = true;
-		this.simple = true;
-	}
-	function VTree(body, config) {
-		var i;
-		config = extend({ allowJSON: false }, config);
-		Object.defineProperty(this, 'config', { enumerable: false, value: config });
-		if (body && body.length) {
-			for (i=0; i<body.length; i++) {
-				this.push(body[i]);
-			}
-		}
-	}
-	VTree.prototype = new Array();
-
-	var createVNode = function(spec){
-		return new VNode(spec.name, spec.attributes, [])
-	};
-	var createVText = function(spec){
-		return new VText(spec.content)
-	};
+	/**
+	 * Parse handlebar template
+	 * @param html
+	 * @returns {Array}
+	 */
 	var parse = function(html){
 		var tree = [],
 			current = null;
 
+		// Create parser
 		var parser = new htmlparser.Parser({
 			onopentag: function(name, attrs){
 				var node = {
@@ -62,10 +28,7 @@
 					children: []
 				};
 
-				node.vnode = createVNode(node);
-
 				if(current){
-					current.vnode.children.push(node.vnode);
 					current.children.push(node);
 				}else{
 					tree.push(node);
@@ -73,6 +36,7 @@
 				current = node;
 			},
 			ontext: function(text){
+				// Deal with adjacent blocks and expressions
 				text = text.replace("}{", '}  {').replace("} {", '}   {').replace("}  {", '}    {');
 				var multiple = text.search(/{({[^{}]+})}/) > -1;
 				if(multiple){
@@ -80,29 +44,41 @@
 					text = text.map(function(item, index){
 						if(item[0] == "{")
 							item = "{"+item+"}";
+						if(item == "")
+							return undefined;
 						return item;
 					});
 				}else{
 					text = [text];
 				}
 
+				text = text.filter(Boolean);
+				console.log(text);
+
 				text.forEach(function(text){
 					var node = {
 						type: 'text',
 						content: text
 					};
-					node.vtext = createVText(node);
-					current.vnode.children.push(node.vtext);
-					current.children.push(node);
+					if(current){
+						current.children.push(node);
+					}else{
+						tree.push(node);
+					}
 				});
 			},
 			onclosetag: function(tagname){
-				current = current.parent;
+				current = current ? current.parent : null;
 			}
 		}, {decodeEntities: true});
+
+		// Initiate parsing
 		parser.write(html);
+
+		// Stop parser
 		parser.end();
 
+		// Return parsed html tree
 		return tree;
 	};
 
@@ -116,13 +92,18 @@
 		'compile': function(template, options){
 			options = options || {};
 
-			// Remove spaces
+			// Remove special characters
 			template = template.replace(/> </g, '><')
 				.replace(/> {{/g, '>{{')
 				.replace(/}} </g, '}}<')
 				.replace(/\n/g, '')
 				.replace(/\t/g, '');
 
+			/**
+			 * Places single quotes around a string
+			 * @param string
+			 * @returns {string}
+			 */
 			var string2js = function(string){
 				var open = string.indexOf('{{'),
 					close = string.indexOf('}}'),
@@ -134,12 +115,24 @@
 					return "'"+string+"'"
 				}
 			};
+
+			/**
+			 * Convert vnode to javascript
+			 * @param vnode
+			 * @returns {string}
+			 */
 			var node2js = function(vnode){
 				if(!vnode.children || !vnode.children.length){
 					vnode.children = '[]';
 				}
 				return 'h(' + [string2js(vnode.name), vnode.attributes, vnode.children].join(',') + ')';
 			};
+
+			/**
+			 * Converts vtext node to javascript
+			 * @param vtext
+			 * @returns {*}
+			 */
 			var text2js = function(vtext){
 				var content = vtext.content;
 				var _if = content.indexOf('{{#if'),
@@ -158,14 +151,24 @@
 				if(_ifClose != -1 || _unlessClose != -1)
 					return ':null,';
 
+				// Output content
 				return string2js(vtext.content);
 			};
+
+			/**
+			 * Converts handlebar expression to javascript
+			 * @param expression
+			 * @returns {*}
+			 */
 			var expression2js = function(expression){
+
+				// Close function
 				if(expression.indexOf('{{/if') > -1 || expression.indexOf('{{/unless') > -1)
 					return ']}})(context)';
 				if(expression.indexOf('{{/each') > -1)
 					return "]})})(context)";
 
+				// Open function
 				var $ops = {
 					'if': function(a, options){
 						return "(function(parent){var target=parent['" + a + "']"+ (options||"") +";var context=Object.prototype.toString.call(target)==='[object Object]'?target:parent;if(!!target){return [";
@@ -185,6 +188,12 @@
 
 				return $ops[operation](dot != -1?value.slice(0, dot):value, dot != -1?options:null);
 			};
+
+			/**
+			 * Converts attribute value to javascript
+			 * @param attribute
+			 * @returns {string}
+			 */
 			var attrs2js = function(attribute){
 				var open = attribute.indexOf('{{');
 				var close = attribute.indexOf('}}');
@@ -195,13 +204,24 @@
 				}
 			};
 
+			/**
+			 * True is the argument contains handlebar expression
+			 * @param string
+			 * @returns {boolean}
+			 */
 			var isHandlebarExpression = function(string){
 				return string.indexOf('{{#') > -1 || string.indexOf('{{/') > -1
 			};
+
+			/**
+			 * Converts vnode to javascript
+			 * @param node
+			 */
 			var toJavaScript = function(node){
 				var children = node.children,
 					attributes = node.attributes;
 
+				// recursively convert children to javascript
 				if(children && children.length){
 					var childs = [],
 						opens = 0;
@@ -223,9 +243,8 @@
 
 						if(opens > 0){
 							childs[len-1] = childs[len-1] + child;
-							return;
 						}else{
-							return childs.push(child);
+							childs.push(child);
 						}
 					});
 
@@ -240,6 +259,7 @@
 				}
 
 				if(node.type == 'text'){
+					// Deal with handlebar expressions in text
 					if(isHandlebarExpression(node.content)){
 						return expression2js(node.content);
 					}else{
@@ -252,14 +272,21 @@
 				}
 			};
 
+			// Parse handlebar template using htmlparser2
 			var parsed = parse(template);
+
+			// Convert parsed html tree to javascript
 			var js = parsed.map(toJavaScript)[0];
+
+			// Base function - extend with all children
 			js = ['(function(state){ var context = state || {}; return [', js, '][0]; })'].join('');
 
+			// Helps debug issue's - include the output of this in github issues to help me out ;-)
 			if(options.debug){
 				console.log(js);
 			}
 
+			// function is currently a string so eval it and return it
 			return eval(js);
 		}
 	};
