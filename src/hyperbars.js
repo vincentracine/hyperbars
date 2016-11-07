@@ -99,6 +99,15 @@
 				.replace(/\t/g, '');
 
 			/**
+			 * Returns a formatted string in javascript format based on handlebar expression
+			 * @param string
+			 */
+			var block2js = function(string){
+				string = string.replace(/(this).?/, '').replace(/..\//g,'parent.');
+				return string.indexOf('@') == -1 ? string.indexOf('parent') == 0 ? "this."+string : "''+this.context."+string : "this.context['"+string+"']";
+			};
+
+			/**
 			 * Places single quotes around a string
 			 * @param string
 			 * @returns {string}
@@ -109,7 +118,7 @@
 					value = string.slice(open + 2, close);
 
 				if(open != -1 && close != -1){
-					return "''+context"+(value.indexOf('this') == 0 ? value.slice(4) : '.'+value);
+					return block2js(value);
 				}else{
 					return "'"+string+"'"
 				}
@@ -142,25 +151,27 @@
 			 * @returns {*}
 			 */
 			var expression2js = function(expression){
-
-				// Close function
+				// Close if and unless blocks
 				if(expression.indexOf('{{/if') > -1 || expression.indexOf('{{/unless') > -1)
-					return 'null]}})(context)';
+					return ']}}.bind({parent:this.context}))()';
+
+				// Close #each block
 				if(expression.indexOf('{{/each') > -1)
-					return "null]})})(context)";
+					return "]}.bind({parent:this.context}))}.bind({parent:this.context}))()";
 
 				// Open function
 				var $ops = {
 					'if': function(a, options){
-						return "(function(parent){var target=parent['" + a + "']"+ (options||"") +";var context=Object.prototype.toString.call(target)==='[object Object]'?target:parent;if(!!target){return [null";
+						return "(function(){var target=this.parent['" + a + "']"+(options||"")+";this.context=Object.prototype.toString.call(target)==='[object Object]'?target:this.parent;if(typeof this.context==='object')this.context.parent=this.parent;if(!!target){return [";
 					},
 					'unless': function(a, options){
-						return "(function(parent){var target=parent['" + a + "']"+ (options||"") +";var context=Object.prototype.toString.call(target)==='[object Object]'?target:parent;if(!target){return [null";
+						return "(function(){var target=this.parent['" + a + "']"+(options||"")+";this.context=Object.prototype.toString.call(target)==='[object Object]'?target:this.parent;if(typeof this.context==='object')this.context.parent=this.parent;if(!target){return [";
 					},
 					'each': function(a, options){
-						return "(function(parent){var context=parent; return context['" + a + "']"+ (options||"") +".map(function(context, $index){context.parent = parent;return [null";
+						return "(function(){this.context=this.parent;return this.context['" + a + "']"+ (options||"") +".map(function(context, index, array){this.context=context;this.context.parent=this.parent;this.context['@index']=index;this.context['@first']=index==0;this.context['@last']=index==array.length-1;return [";
 					}
 				};
+				expression = expression.replace(/(this).?/, '').replace(/..\//g,'parent.');
 				var whitespace = expression.indexOf(' '),
 					operation = expression.slice(3, whitespace),
 					value = expression.slice(whitespace + 1, expression.indexOf('}}')),
@@ -211,32 +222,12 @@
 
 				// recursively convert children to javascript
 				if(children && children.length){
-					var childs = [],
-						opens = 0;
-
-					children.forEach(function(child, index){
+					var _children = [];
+					children.forEach(function(child){
 						child = toJavaScript(child);
-						var len = childs.length;
-
-						if(child.indexOf('(function(){') > -1){
-							opens++;
-							return childs.push(child);
-						}
-
-						if(opens > 0 && (child.indexOf(']}})(context)') > -1||child.indexOf(']})})(context)'))){
-							opens--;
-							childs[len-1] = childs[len-1] + child;
-							return;
-						}
-
-						if(opens > 0){
-							childs[len-1] = childs[len-1] + child;
-						}else{
-							childs.push(child);
-						}
+						_children.push(child);
 					});
-
-					node.children = '['+childs+']';
+					node.children = '['+_children.join()+']';
 				}
 
 				// Handle attributes
@@ -267,7 +258,7 @@
 			var js = parsed.map(toJavaScript)[0];
 
 			// Base function - extend with all children
-			js = ['(function(state){ var context = state || {}; return [', js, '][0]; })'].join('');
+			js = ['(function(state){this.context=state||{};return [', js, '][0];}.bind({}))'].join('');
 
 			// Helps debug issue's - include the output of this in github issues to help me out ;-)
 			if(options.debug){
