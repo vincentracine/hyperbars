@@ -158,7 +158,7 @@
 						return "(function(parent){var target=parent['" + a + "']"+ (options||"") +";var context=Object.prototype.toString.call(target)==='[object Object]'?target:parent;if(!target){return [null";
 					},
 					'each': function(a, options){
-						return "(function(parent){var context=parent; return context['" + a + "']"+ (options||"") +".map(function(context){context.parent = parent;return [null";
+						return "(function(parent){var context=parent; return context['" + a + "']"+ (options||"") +".map(function(context, $index){context.parent = parent;return [null";
 					}
 				};
 				var whitespace = expression.indexOf(' '),
@@ -176,10 +176,8 @@
 			 * @returns {string}
 			 */
 			var attrs2js = function(attribute){
-				var open = attribute.indexOf('{{');
-				var close = attribute.indexOf('}}');
-				if(open != -1 && close != -1){
-					return "context['" + attribute.slice(open + 2, close) + "']";
+				if(isHandlebarBlock(attribute)){
+					return string2js(attribute);
 				}else{
 					return  "'" + attribute + "'";
 				}
@@ -192,6 +190,15 @@
 			 */
 			var isHandlebarExpression = function(string){
 				return string.indexOf('{{#') > -1 || string.indexOf('{{/') > -1
+			};
+
+			/**
+			 * True is the argument contains handlebar expression
+			 * @param string
+			 * @returns {boolean}
+			 */
+			var isHandlebarBlock= function(string){
+				return string.indexOf('{{') > -1 && string.indexOf('}}') > -1
 			};
 
 			/**
