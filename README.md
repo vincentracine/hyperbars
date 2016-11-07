@@ -72,3 +72,6 @@ var element = createElement( compiled(state) )
 ## See also
 * [Virtual DOM Handlebars](https://github.com/jchook/virtual-dom-handlebars)
 * [handlebars-react](https://github.com/stevenvachon/handlebars-react)
+
+## License
+This software is provided free of charge and without restriction under the [MIT License](LICENSE)
