@@ -1,5 +1,6 @@
 # Hyperbars
 Compile [Handlebars](http://handlebarsjs.com/) templates to javascript which can be used with [Virtual DOM](https://github.com/Matt-Esch/virtual-dom).
+This library offer a comprehensive coverage of the Handlebars API and more features will be added soon.
 
 Compiles something like this:
 ```html
@@ -13,16 +14,20 @@ Compiles something like this:
 into this:
 ```js
 (function (state) {
-	var context = state || {};
-	return [h('div', {}, [(function (parent) {
-		var target = parent['profile'];
-		var context = Object.prototype.toString.call(target) === '[object Object]' ? target : parent;
+	this.context = state || {};
+	return [h('div', {}, [(function () {
+		var target = this.parent['profile'];
+		this.context = Object.prototype.toString.call(target) === '[object Object]' ? target : this.parent;
+		if (typeof this.context === 'object')
+			this.context.parent = this.parent;
 		if (!!target) {
-			return [null, '    ', '' + context.name, null]
+			return ['    ', '' + this.context.name]
 		}
-	})(context)])][0];
+	}.bind({parent: this.context}))()])][0];
+}.bind({}))
 })
 ```
+
 then you can call the returned function with a state object (`createElement` is a [virtual-dom](https://github.com/Matt-Esch/virtual-dom/tree/master/vdom) function):
 ```js
 createElement( compiled({ profile:null }) ) // <div></div>
@@ -58,12 +63,16 @@ var element = createElement( compiled(state) )
 // Do what you will from here e.g document.append(element)
 ```
 
+## v0.0.6
+* Support for `{{@index}}`, `{{@first}}`, `{{@last}}`
+* Support for `../`
+* Bug fixes
+
 ## Roadmap
 * Add support for partials
 * Add CommonJS support
 * Add support for custom helpers
 * Add support for `{{else}}`
-* Add support for `../`
 * Add support for `{{{no-escape}}}`
 
 ## Dependencies
