@@ -1,5 +1,5 @@
 /**
- * Hyperbars version 0.0.1
+ * Hyperbars version 0.0.7
  *
  * Copyright (c) 2016 Vincent Racine
  * @license MIT
@@ -7,6 +7,12 @@
 (function(Hyperbars){
 
 	'use strict';
+
+	var h = require('virtual-dom/h'),
+		diff = require('virtual-dom/diff'),
+		patch = require('virtual-dom/patch'),
+		createElement = require('virtual-dom/create-element'),
+		htmlparser = require("htmlparser2");
 
 	/**
 	 * Parse handlebar template
@@ -267,6 +273,15 @@
 
 			// function is currently a string so eval it and return it
 			return eval(js);
+		},
+
+		/**
+		 * Create HTML element from VNode
+		 * @param vnode
+		 * @returns {*}
+		 */
+		'createElement': function(vnode){
+			return createElement(vnode)
 		}
 	};
 
