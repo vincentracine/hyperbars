@@ -276,13 +276,13 @@
 		},
 
 		/**
-		 * Create HTML element from VNode
-		 * @param vnode
-		 * @returns {*}
+		 * Dependencies
 		 */
-		'createElement': function(vnode){
-			return createElement(vnode)
-		}
+		'createElement': createElement,
+		'h': h,
+		'diff': diff,
+		'patch': patch,
+		'htmlparser': htmlparser
 	};
 
 	// Set Hyperbars on 'window'
