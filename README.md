@@ -28,25 +28,16 @@ into this:
 })
 ```
 
-then you can call the returned function with a state object (`createElement` is a [virtual-dom](https://github.com/Matt-Esch/virtual-dom/tree/master/vdom) function):
+then you can call the returned function with a state object:
 ```js
-createElement( compiled({ profile:null }) ) // <div></div>
-createElement( compiled({ profile:{ name:"Foo bar" }}) ) // <div>Foo bar</div>
+Hyperbars.createElement( compiled({ profile:null }) ) // <div></div>
+Hyperbars.createElement( compiled({ profile:{ name:"Foo bar" }}) ) // <div>Foo bar</div>
 ```
 
 ## Installation
-Step 1: Install [htmlparser2](https://github.com/fb55/htmlparser2) and make sure it's available on the global scope.
-```js
-if(typeof window.htmlparser !== 'object'){
-	throw new Error("Please install htmlparser2")
-}
-```
-Step 2: Install [virtual-dom](https://github.com/Matt-Esch/virtual-dom).
-
-
-Step 3: In your `index.html` file, include the Hyperbars.js file:
+Step 1: In your `index.html` file, include the hyperbars.js or hyperbars.min.js file:
 ```html
-<script type="text/javascript" src="path/to/Hyperbars.js"></script>
+<script type="text/javascript" src="path/to/dis/hyperbars.js"></script>
 ```
 
 ## Usage
@@ -58,10 +49,14 @@ var compiled = Hyperbars.compile(template)
 ```
 Step 2:
 ```js
-var element = createElement( compiled(state) )
+var element = Hyperbars.createElement( compiled(state) )
 
 // Do what you will from here e.g document.append(element)
 ```
+## v0.0.7
+* Added minified version
+* Dependencies are now part of the source
+* HTML attribute bug fix
 
 ## v0.0.6
 * Support for `{{@index}}`, `{{@first}}`, `{{@last}}`
@@ -77,6 +72,7 @@ var element = createElement( compiled(state) )
 
 ## Dependencies
 * [htmlparser2](https://github.com/fb55/htmlparser2)
+* [virtual-dom](https://github.com/Matt-Esch/virtual-dom)
 
 ## See also
 * [Virtual DOM Handlebars](https://github.com/jchook/virtual-dom-handlebars)
