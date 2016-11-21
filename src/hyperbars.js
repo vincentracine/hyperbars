@@ -47,13 +47,20 @@
 				var multiple = text.search(/{({[^{}]+})}/) > -1;
 				if(multiple){
 					text = text.split(/{({[^{}]+})}/g);
-					text = text.map(function(item, index){
-						if(item[0] == "{")
+					text = text.map(function(item, index, array){
+						if(!item || item == "") return undefined;
+						if(item == "{") return "";
+
+						if(item[0] == "{" && item.length > 1 && array[index+1] != "}"){
 							item = "{"+item+"}";
-						if(item == "")
-							return undefined;
+						}
+						if(item[0] == "{" && item.length > 1 && array[index+1] == "}"){
+							item = "{{"+item+"}}";
+							text[index+1] = "";
+						}
+
 						return item;
-					});
+					}).filter(function(item){ return item != "{" || item != "}" });
 				}else{
 					text = [text];
 				}
@@ -109,12 +116,21 @@
 			 * @param string
 			 */
 			var block2js = function(string){
-				string = string.replace(/(this).?/, '').replace(/..\//g,'parent.');
-				return string.indexOf('@') == -1 ? string.indexOf('parent') == 0 ? "this."+string : "''+this.context."+string : "this.context['"+string+"']";
+				var sanitised = string.replace(/(this).?/, '').replace(/..\//g,'parent.');
+				// Do not encode HTML
+				if(sanitised[0] == "{"){
+					sanitised = sanitised.slice(1);
+					return [
+						"h('div',{'innerHTML':",
+						sanitised.indexOf('parent') == 0 ? "this." + sanitised : "''+this.context." + sanitised,
+						"}, [])"
+					].join('');
+				}
+				return sanitised.indexOf('@') == -1 ? sanitised.indexOf('parent') == 0 ? "this."+sanitised : "''+this.context."+sanitised : "this.context['"+sanitised+"']";
 			};
 
 			/**
-			 * Places single quotes around a string
+			 * Places single quotes around a string.
 			 * @param string
 			 * @returns {string}
 			 */
@@ -122,9 +138,8 @@
 				var open = string.indexOf('{{'),
 					close = string.indexOf('}}'),
 					value = string.slice(open + 2, close);
-
 				if(open != -1 && close != -1){
-					return block2js(value);
+					return open > 0 ? "'"+string.slice(0, open)+"'+" + block2js(value) : block2js(value);
 				}else{
 					return "'"+string+"'"
 				}

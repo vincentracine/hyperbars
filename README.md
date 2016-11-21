@@ -18,14 +18,12 @@ into this:
 	return [h('div', {}, [(function () {
 		var target = this.parent['profile'];
 		this.context = Object.prototype.toString.call(target) === '[object Object]' ? target : this.parent;
-		if (typeof this.context === 'object')
-			this.context.parent = this.parent;
+		if (typeof this.context === 'object') this.context.parent = this.parent;
 		if (!!target) {
 			return ['    ', '' + this.context.name]
 		}
 	}.bind({parent: this.context}))()])][0];
 }.bind({}))
-})
 ```
 
 then you can call the returned function with a state object:
@@ -41,18 +39,41 @@ Step 1: In your `index.html` file, include the hyperbars.js or hyperbars.min.js 
 ```
 
 ## Usage
-Step 1:
+Step 1: Compilation & Setup
 ```js
 var template = "<div>{{name}}</div>"
 var state = { name: "Foo bar" }
 var compiled = Hyperbars.compile(template)
 ```
-Step 2:
+Step 2: Displaying
 ```js
-var element = Hyperbars.createElement( compiled(state) )
+var tree = compiled(state)
+var element = Hyperbars.createElement(tree)
 
 // Do what you will from here e.g document.append(element)
 ```
+Step 3: Updating
+```js
+// State changes somehow
+state.name = "Baz Bar"
+
+// Generate new tree based on new state
+var newTree = compiled(state);
+
+// Find sets required to update real DOM so it is identical to virtual dom
+var patches = Hyperbars.diff(tree, newTree);
+
+// Update real DOM
+Hyperbars.patch(element, patches);
+
+// Cache new tree
+tree = newTree;
+```
+Note: It is best practice to create a function called "setState(newState)" which performs step 3.
+
+## v0.0.8
+* Added support for `{{{no-escape}}}`
+
 ## v0.0.7
 * Added minified version
 * Dependencies are now part of the source
@@ -68,7 +89,6 @@ var element = Hyperbars.createElement( compiled(state) )
 * Add CommonJS support
 * Add support for custom helpers
 * Add support for `{{else}}`
-* Add support for `{{{no-escape}}}`
 
 ## Dependencies
 * [htmlparser2](https://github.com/fb55/htmlparser2)
