@@ -35,7 +35,7 @@ Hyperbars.createElement( compiled({ profile:{ name:"Foo bar" }}) ) // <div>Foo b
 ## Installation
 Step 1: In your `index.html` file, include the hyperbars.js or hyperbars.min.js file:
 ```html
-<script type="text/javascript" src="path/to/dis/hyperbars.js"></script>
+<script type="text/javascript" src="path/to/dist/hyperbars.js"></script>
 ```
 
 ## Usage
