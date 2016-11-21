@@ -58,16 +58,16 @@ Step 3: Updating
 state.name = "Baz Bar"
 
 // Generate new tree based on new state
-var newTree = compiled(state);
+var newTree = compiled(state)
 
 // Find sets required to update real DOM so it is identical to virtual dom
-var patches = Hyperbars.diff(tree, newTree);
+var patches = Hyperbars.diff(tree, newTree)
 
 // Update real DOM
-Hyperbars.patch(element, patches);
+Hyperbars.patch(element, patches)
 
 // Cache new tree
-tree = newTree;
+tree = newTree
 ```
 Note: It is best practice to create a function called "setState(newState)" which performs step 3.
 
