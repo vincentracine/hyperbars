@@ -1,10 +1,10 @@
 /**
- * Hyperbars version 0.0.7
+ * Hyperbars version 0.1.0
  *
  * Copyright (c) 2016 Vincent Racine
  * @license MIT
  */
-(function(Hyperbars){
+module.exports = Hyperbars = (function(Hyperbars){
 
 	'use strict';
 
@@ -97,12 +97,22 @@
 	Hyperbars.prototype = {
 		/**
 		 * Compiles HTML to use with virtual-dom
+		 *
+		 * options params:
+		 * | name  | default | description
+		 * ---------------------------------
+		 * | debug |  false  | outputs the js to console
+		 * | raw   |  false  | returns the compiled function as a string
+		 *
 		 * @param template html
 		 * @param options options
 		 * @returns * compiled function
 		 */
 		'compile': function(template, options){
+			var partials = this.partials;
 			options = options || {};
+			options.debug = options.debug || false;
+			options.raw = options.raw || false;
 
 			// Remove special characters
 			template = template.replace(/> </g, '><')
@@ -190,9 +200,33 @@
 					},
 					'each': function(a, options){
 						return "(function(){this.context=this.parent;return this.context['" + a + "']"+ (options||"") +".map(function(context, index, array){this.context=context;this.context.parent=this.parent;this.context['@index']=index;this.context['@first']=index==0;this.context['@last']=index==array.length-1;return [";
+					},
+					'partial': function(a, options){
+						options = a.split(' ');
+						var partial = options[0],
+							context = options[1],
+							params = options.slice(2);
+
+						if(context && context.indexOf('=') > -1){
+							params.push(context);
+							context = null;
+						}
+						// Convert parameters
+						params = ['{', params.map(function(param){
+							param = param.split('=');
+							return [param[0], ":", param[1], ','].join('')
+						}), '}'].join('');
+
+						return partials[partial] + (context ? "(this.context['"+context+"'],":"(this.context,") + params + ")";
 					}
 				};
-				expression = expression.replace(/(this).?/, '').replace(/..\//g,'parent.');
+
+				// Parse
+				expression = expression
+					.replace(/(this).?/, '')
+					.replace(/..\//g,'parent.')
+					.replace('{{>', '{{#partial');
+
 				var whitespace = expression.indexOf(' '),
 					operation = expression.slice(3, whitespace),
 					value = expression.slice(whitespace + 1, expression.indexOf('}}')),
@@ -221,7 +255,7 @@
 			 * @returns {boolean}
 			 */
 			var isHandlebarExpression = function(string){
-				return string.indexOf('{{#') > -1 || string.indexOf('{{/') > -1
+				return string.indexOf('{{#') > -1 || string.indexOf('{{/') > -1 || string.indexOf('{{>') > -1
 			};
 
 			/**
@@ -279,15 +313,15 @@
 			var js = parsed.map(toJavaScript)[0];
 
 			// Base function - extend with all children
-			js = ['(function(state){this.context=state||{};return [', js, '][0];}.bind({}))'].join('');
+			js = ['(function(state){this.context={};for(var i=0;i<arguments.length;i++){for(var a in arguments[i]){this.context[a]=arguments[i][a]}}return [', js, '][0]}.bind({}))'].join('');
 
 			// Helps debug issue's - include the output of this in github issues to help me out ;-)
-			if(options.debug){
+			if(options.debug || this.debug){
 				console.log(js);
 			}
 
 			// function is currently a string so eval it and return it
-			return eval(js);
+			return options.raw ? js : eval(js);
 		},
 
 		/**
@@ -300,7 +334,10 @@
 		'htmlparser': htmlparser
 	};
 
-	// Set Hyperbars on 'window'
-	window.Hyperbars = new Hyperbars();
+	return new Hyperbars();
 
-})(window.Hyperbars || function(){});
+})(function(){
+		this.partialDirectory = '/partials';
+		this.debug = false;
+		this.partials = {};
+	});

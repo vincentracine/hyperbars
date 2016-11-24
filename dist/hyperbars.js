@@ -3129,6 +3129,7 @@ function createElement(vnode, opts) {
 
     return node
 }
+
 },{"../vnode/handle-thunk.js":51,"../vnode/is-vnode.js":54,"../vnode/is-vtext.js":55,"../vnode/is-widget.js":56,"./apply-properties":41,"global/document":24}],43:[function(require,module,exports){
 // Maps a virtual DOM tree onto a real DOM tree in an efficient manner.
 // We don't want to read all of the DOM nodes in the tree so we use
@@ -3566,6 +3567,16 @@ function h(tagName, properties, children) {
         props.value !== undefined &&
         !isHook(props.value)
     ) {
+        if (props.value !== null && typeof props.value !== 'string') {
+            throw UnsupportedValueType({
+                expected: 'String',
+                received: typeof props.value,
+                Vnode: {
+                    tagName: tag,
+                    properties: props
+                }
+            });
+        }
         props.value = softSetHook(props.value);
     }
 
@@ -3643,6 +3654,25 @@ function UnexpectedVirtualElement(data) {
         'Suggested fix: change your `h(..., [ ... ])` callsite.';
     err.foreignObject = data.foreignObject;
     err.parentVnode = data.parentVnode;
+
+    return err;
+}
+
+function UnsupportedValueType(data) {
+    var err = new Error();
+
+    err.type = 'virtual-hyperscript.unsupported.value-type';
+    err.message = 'Unexpected value type for input passed to h().\n' +
+        'Expected a ' +
+        errorString(data.expected) +
+        ' but got:\n' +
+        errorString(data.received) +
+        '.\n' +
+        'The vnode is:\n' +
+        errorString(data.Vnode)
+        '\n' +
+        'Suggested fix: Cast the value passed to h() to a string using String(value).';
+    err.Vnode = data.Vnode;
 
     return err;
 }
@@ -4408,12 +4438,12 @@ function isArray(obj) {
 
 },{}],64:[function(require,module,exports){
 /**
- * Hyperbars version 0.0.7
+ * Hyperbars version 0.1.0
  *
  * Copyright (c) 2016 Vincent Racine
  * @license MIT
  */
-(function(Hyperbars){
+module.exports = Hyperbars = (function(Hyperbars){
 
 	'use strict';
 
@@ -4506,12 +4536,22 @@ function isArray(obj) {
 	Hyperbars.prototype = {
 		/**
 		 * Compiles HTML to use with virtual-dom
+		 *
+		 * options params:
+		 * | name  | default | description
+		 * ---------------------------------
+		 * | debug |  false  | outputs the js to console
+		 * | raw   |  false  | returns the compiled function as a string
+		 *
 		 * @param template html
 		 * @param options options
 		 * @returns * compiled function
 		 */
 		'compile': function(template, options){
+			var partials = this.partials;
 			options = options || {};
+			options.debug = options.debug || false;
+			options.raw = options.raw || false;
 
 			// Remove special characters
 			template = template.replace(/> </g, '><')
@@ -4599,9 +4639,33 @@ function isArray(obj) {
 					},
 					'each': function(a, options){
 						return "(function(){this.context=this.parent;return this.context['" + a + "']"+ (options||"") +".map(function(context, index, array){this.context=context;this.context.parent=this.parent;this.context['@index']=index;this.context['@first']=index==0;this.context['@last']=index==array.length-1;return [";
+					},
+					'partial': function(a, options){
+						options = a.split(' ');
+						var partial = options[0],
+							context = options[1],
+							params = options.slice(2);
+
+						if(context && context.indexOf('=') > -1){
+							params.push(context);
+							context = null;
+						}
+						// Convert parameters
+						params = ['{', params.map(function(param){
+							param = param.split('=');
+							return [param[0], ":", param[1], ','].join('')
+						}), '}'].join('');
+
+						return partials[partial] + (context ? "(this.context['"+context+"'],":"(this.context,") + params + ")";
 					}
 				};
-				expression = expression.replace(/(this).?/, '').replace(/..\//g,'parent.');
+
+				// Parse
+				expression = expression
+					.replace(/(this).?/, '')
+					.replace(/..\//g,'parent.')
+					.replace('{{>', '{{#partial');
+
 				var whitespace = expression.indexOf(' '),
 					operation = expression.slice(3, whitespace),
 					value = expression.slice(whitespace + 1, expression.indexOf('}}')),
@@ -4630,7 +4694,7 @@ function isArray(obj) {
 			 * @returns {boolean}
 			 */
 			var isHandlebarExpression = function(string){
-				return string.indexOf('{{#') > -1 || string.indexOf('{{/') > -1
+				return string.indexOf('{{#') > -1 || string.indexOf('{{/') > -1 || string.indexOf('{{>') > -1
 			};
 
 			/**
@@ -4688,15 +4752,15 @@ function isArray(obj) {
 			var js = parsed.map(toJavaScript)[0];
 
 			// Base function - extend with all children
-			js = ['(function(state){this.context=state||{};return [', js, '][0];}.bind({}))'].join('');
+			js = ['(function(state){this.context={};for(var i=0;i<arguments.length;i++){for(var a in arguments[i]){this.context[a]=arguments[i][a]}}return [', js, '][0]}.bind({}))'].join('');
 
 			// Helps debug issue's - include the output of this in github issues to help me out ;-)
-			if(options.debug){
+			if(options.debug || this.debug){
 				console.log(js);
 			}
 
 			// function is currently a string so eval it and return it
-			return eval(js);
+			return options.raw ? js : eval(js);
 		},
 
 		/**
@@ -4709,10 +4773,14 @@ function isArray(obj) {
 		'htmlparser': htmlparser
 	};
 
-	// Set Hyperbars on 'window'
-	window.Hyperbars = new Hyperbars();
+	return new Hyperbars();
 
-})(window.Hyperbars || function(){});
+})(function(){
+		this.partialDirectory = '/partials';
+		this.debug = false;
+		this.partials = {};
+	});
+
 },{"htmlparser2":32,"virtual-dom/create-element":37,"virtual-dom/diff":38,"virtual-dom/h":39,"virtual-dom/patch":40}],65:[function(require,module,exports){
 'use strict'
 
