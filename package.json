@@ -7,16 +7,14 @@
     "test": "test"
   },
   "scripts": {
-    "test": "npm test"
+    "test": "node test.js"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vincentracine/hyperbars.git"
   },
   "keywords": [
-    "handlebars",
     "hyperscript",
-    "virtual-dom",
     "compile",
     "compiler",
     "html",
@@ -28,5 +26,8 @@
   "bugs": {
     "url": "https://github.com/vincentracine/hyperbars/issues"
   },
-  "homepage": "https://github.com/vincentracine/hyperbars#readme"
+  "homepage": "https://github.com/vincentracine/hyperbars#readme",
+  "dependencies": {
+    "virtual-dom": "git+https://github.com/vincentracine/virtual-dom.git"
+  }
 }
