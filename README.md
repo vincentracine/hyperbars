@@ -1,6 +1,6 @@
 # Hyperbars
 Compile [Handlebars](http://handlebarsjs.com/) templates to javascript which can be used with [Virtual DOM](https://github.com/Matt-Esch/virtual-dom).
-This library offer a comprehensive coverage of the Handlebars API and more features will be added soon.
+This library offer a comprehensive coverage of the Handlebars API and more features will be added soon. Your Handlebar templates will work out of the box.
 
 Compiles something like this:
 ```html
@@ -28,6 +28,7 @@ into this:
 
 then you can call the returned function with a state object:
 ```js
+var compiled = Hyperbars.compile(template)
 Hyperbars.createElement( compiled({ profile:null }) ) // <div></div>
 Hyperbars.createElement( compiled({ profile:{ name:"Foo bar" }}) ) // <div>Foo bar</div>
 ```
@@ -69,7 +70,47 @@ Hyperbars.patch(element, patches)
 // Cache new tree
 tree = newTree
 ```
-Note: It is best practice to create a function called "setState(newState)" which performs step 3.
+**Note:** It is best practice to create a function called "setState(newState)" which performs step 3.
+
+## Partials
+Currently only basic partials are supported. Please refer to the change log below for scope of what is support
+with partials. I will be adding more and more coverage of the Handlebars partials API soon.
+
+Step 1: Register partial with Hyperbars
+```js
+Hyperbars.partials['myPartial'] = Hyperbars.compile('<nav>{{title}}</nav>', {raw: true})
+```
+
+Step 2: Use it in your template
+```html
+<body>
+    {{> myPartial}}
+</body>
+```
+**Note:** Notice the use of `{raw: true}` when compiling the partial. This will return the compiled function in string format
+
+### Injecting a context
+```html
+<body>
+    {{> myPartial myContext}}
+</body>
+```
+
+### Parameters
+```html
+<body>
+    {{> myPartial title="Hello World"}}
+</body>
+```
+
+To view more on partials please visit see [handlebars partials](http://handlebarsjs.com/partials.html).
+
+## v0.1.0
+* Added CommonJS support
+* Added support for basic partials `{{> myPartial}}`
+* Added support for partial context `{{> myPartial myContext}}`
+* Added support for partial parameters `{{> myPartial title="Hello"}}`
+* Added a bunch of tests.
 
 ## v0.0.8
 * Added support for `{{{no-escape}}}`
@@ -85,10 +126,9 @@ Note: It is best practice to create a function called "setState(newState)" which
 * Bug fixes
 
 ## Roadmap
-* Add support for partials
-* Add CommonJS support
 * Add support for custom helpers
 * Add support for `{{else}}`
+* Add support for `{{! comments }}`
 
 ## Dependencies
 * [htmlparser2](https://github.com/fb55/htmlparser2)
