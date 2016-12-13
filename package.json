@@ -1,6 +1,6 @@
 {
   "name": "hyperbars",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Compiles handlebar template to hyperscript so it can be used with virtual-dom",
   "main": "index.js",
   "directories": {
