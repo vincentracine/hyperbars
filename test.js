@@ -5,7 +5,7 @@
  * @license MIT
  */
 
-var Hyperbars = require('./src/hyperbars.v2'),
+var Hyperbars = require('./src/hyperbars'),
 	h = require('virtual-dom/h'),
 	diff = require('virtual-dom/diff'),
 	patch = require('virtual-dom/patch'),
