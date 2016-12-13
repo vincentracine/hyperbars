@@ -5,10 +5,22 @@
  * @license MIT
  */
 
-var Hyperbars = require('./src/hyperbars'),
+var Hyperbars = require('./src/hyperbars.v2'),
+	h = require('virtual-dom/h'),
+	diff = require('virtual-dom/diff'),
+	patch = require('virtual-dom/patch'),
+	createElement = require('virtual-dom/create-element'),
+	htmlparser = require("htmlparser2"),
 	colors = require('colors'),
 	passed = 0,
 	failed = 0;
+
+Hyperbars.setup({
+	h: h,
+	patch: patch,
+	createElement: createElement,
+	htmlparser: htmlparser
+});
 
 // Helper functions
 function test (name, condition) {
@@ -17,7 +29,7 @@ function test (name, condition) {
 }
 function htmlOf(compiled, state){
 	state = state || {};
-	return Hyperbars.createElement(compiled(state)).toString()
+	return createElement(compiled(state)).toString()
 }
 
 // Tests
@@ -57,7 +69,7 @@ test('#if is false', function(){
 });
 test('nested handlebar expression', function(){
 	var html = '<div>{{#if bool}}{{#if bool}}Hello!{{/if}}{{/if}}</div>';
-	var expect = '<div>    Hello!</div>';
+	var expect = '<div>Hello!</div>';
 	var state = {bool: true};
 	var compiled = Hyperbars.compile(html);
 	return htmlOf(compiled, state) == expect;
@@ -86,35 +98,35 @@ test('#each and context', function(){
 test('@index', function(){
 	var html = '<div>{{#each array}}<p>{{@index}}</p>{{/each}}</div>';
 	var expect = '<div><p>0</p><p>1</p><p>2</p></div>';
-	var state = {array: [{},{},{}]};
+	var state = {array: ['','','']};
 	var compiled = Hyperbars.compile(html);
 	return htmlOf(compiled, state) == expect;
 });
 test('@first', function(){
 	var html = '<div>{{#each array}}<p>{{#if @first}}First{{/if}}</p>{{/each}}</div>';
 	var expect = '<div><p>First</p><p></p><p></p></div>';
-	var state = {array: [{},{},{}]};
+	var state = {array: ['','','']};
 	var compiled = Hyperbars.compile(html);
 	return htmlOf(compiled, state) == expect;
 });
 test('@last', function(){
 	var html = '<div>{{#each array}}<p>{{#if @last}}Last{{/if}}</p>{{/each}}</div>';
 	var expect = '<div><p></p><p></p><p>Last</p></div>';
-	var state = {array: [{},{},{}]};
+	var state = {array: ['','','']};
 	var compiled = Hyperbars.compile(html);
 	return htmlOf(compiled, state) == expect;
 });
 test('#if context change', function(){
 	var html = '<div>{{#if profile}}{{name}}{{/if}}</div>';
-	var expect = '<div>    Foo Bar</div>';
+	var expect = '<div>Foo Bar</div>';
 	var state = {profile: {name: "Foo Bar"}};
 	var compiled = Hyperbars.compile(html);
 	return htmlOf(compiled, state) == expect;
 });
 test('../ context change', function(){
-	var html = '<div>{{#if obj1}}{{#if obj2}}{{../../name}}{{/if}}{{/if}}</div>';
-	var expect = '<div>    Foo Bar</div>';
-	var state = {name: "Foo Bar", obj1: {obj2:{  }}};
+	var html = '<div>{{#if obj1}}{{../name}}{{/if}}</div>';
+	var expect = '<div>Foo Bar</div>';
+	var state = {name: "Foo Bar", obj1: {}};
 	var compiled = Hyperbars.compile(html);
 	return htmlOf(compiled, state) == expect;
 });
@@ -149,12 +161,11 @@ test('basic partials with custom context', function(){
 	return htmlOf(compiled, state) == expect;
 });
 test('basic partials with parameters', function(){
-	Hyperbars.partials['nav'] = Hyperbars.compile('<nav>{{title}}</nav>', {raw: true});
-	var html = '<header>{{> nav title="Hello"}}</header>';
-	var expect = '<header><nav>Hello</nav></header>';
-	var state = {profile:{ name: "Foo Bar" }};
+	Hyperbars.partials['nav'] = Hyperbars.compile('<nav>My name is {{name}} and im {{age}} years old.</nav>', {raw: true});
+	var html = '<header>{{> nav name="Foo Bar" age="99"}}</header>';
+	var expect = '<header><nav>My name is Foo Bar and im 99 years old.</nav></header>';
 	var compiled = Hyperbars.compile(html);
-	return htmlOf(compiled, state) == expect;
+	return htmlOf(compiled) == expect;
 });
 
 console.log("Passed: " + ("" + passed).green, "| Failed: " + ("" + failed)[failed > 0 ? "red" : "green"]);

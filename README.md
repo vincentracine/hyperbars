@@ -14,15 +14,11 @@ Compiles something like this:
 into this:
 ```js
 (function (state) {
-	this.context = state || {};
-	return [h('div', {}, [(function () {
-		var target = this.parent['profile'];
-		this.context = Object.prototype.toString.call(target) === '[object Object]' ? target : this.parent;
-		if (typeof this.context === 'object') this.context.parent = this.parent;
-		if (!!target) {
-			return ['    ', '' + this.context.name]
-		}
-	}.bind({parent: this.context}))()])][0];
+	var Runtime = Hyperbars.Runtime;
+	var context = state;
+	return h('div', {}, [Runtime.if(context['profile'], context, function (context, parent, options) {
+		return ['' + context['name']]
+	})])
 }.bind({}))
 ```
 
@@ -104,6 +100,10 @@ Step 2: Use it in your template
 ```
 
 To view more on partials please visit see [handlebars partials](http://handlebarsjs.com/partials.html).
+
+## v0.1.1
+* Output is much more readable
+* Fixed partial parameter bug
 
 ## v0.1.0
 * Added CommonJS support

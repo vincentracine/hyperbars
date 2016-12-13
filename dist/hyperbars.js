@@ -4447,11 +4447,16 @@ module.exports = Hyperbars = (function(Hyperbars){
 
 	'use strict';
 
+	//var h, diff, patch, createElement, htmlparser;
 	var h = require('virtual-dom/h'),
 		diff = require('virtual-dom/diff'),
 		patch = require('virtual-dom/patch'),
 		createElement = require('virtual-dom/create-element'),
 		htmlparser = require("htmlparser2");
+
+	var isObject = function(a){
+		return Object.prototype.toString.call(a) === '[object Object]'
+	};
 
 	/**
 	 * Parse handlebar template
@@ -4482,7 +4487,6 @@ module.exports = Hyperbars = (function(Hyperbars){
 			},
 			ontext: function(text){
 				// Deal with adjacent blocks and expressions
-				text = text.replace("}{", '}  {').replace("} {", '}   {').replace("}  {", '}    {');
 				var multiple = text.search(/{({[^{}]+})}/) > -1;
 				if(multiple){
 					text = text.split(/{({[^{}]+})}/g);
@@ -4534,6 +4538,16 @@ module.exports = Hyperbars = (function(Hyperbars){
 	};
 
 	Hyperbars.prototype = {
+
+		'setup': function(obj){
+			obj = obj || {};
+			h = obj.h;
+			diff = obj.diff;
+			patch = obj.patch;
+			createElement = obj.createElement;
+			htmlparser = obj.htmlparser;
+		},
+
 		/**
 		 * Compiles HTML to use with virtual-dom
 		 *
@@ -4565,17 +4579,19 @@ module.exports = Hyperbars = (function(Hyperbars){
 			 * @param string
 			 */
 			var block2js = function(string){
+				if(string == "this") return 'context';
+				if(string[0] == '@') return "options['"+string+"']";
 				var sanitised = string.replace(/(this).?/, '').replace(/..\//g,'parent.');
 				// Do not encode HTML
 				if(sanitised[0] == "{"){
 					sanitised = sanitised.slice(1);
 					return [
 						"h('div',{'innerHTML':",
-						sanitised.indexOf('parent') == 0 ? "this." + sanitised : "''+this.context." + sanitised,
+						"''+" + (sanitised.indexOf('parent') == 0 ? sanitised : "context['"+sanitised+"']"),
 						"}, [])"
 					].join('');
 				}
-				return sanitised.indexOf('@') == -1 ? sanitised.indexOf('parent') == 0 ? "this."+sanitised : "''+this.context."+sanitised : "this.context['"+sanitised+"']";
+				return "''+" + (sanitised.indexOf('parent') == 0 ? sanitised : "context['"+sanitised+"']");
 			};
 
 			/**
@@ -4621,44 +4637,9 @@ module.exports = Hyperbars = (function(Hyperbars){
 			 * @returns {*}
 			 */
 			var expression2js = function(expression){
-				// Close if and unless blocks
-				if(expression.indexOf('{{/if') > -1 || expression.indexOf('{{/unless') > -1)
-					return ']}}.bind({parent:this.context}))()';
-
-				// Close #each block
-				if(expression.indexOf('{{/each') > -1)
-					return "]}.bind({parent:this.context}))}.bind({parent:this.context}))()";
-
-				// Open function
-				var $ops = {
-					'if': function(a, options){
-						return "(function(){var target=this.parent['" + a + "']"+(options||"")+";this.context=Object.prototype.toString.call(target)==='[object Object]'?target:this.parent;if(typeof this.context==='object')this.context.parent=this.parent;if(!!target){return [";
-					},
-					'unless': function(a, options){
-						return "(function(){var target=this.parent['" + a + "']"+(options||"")+";this.context=Object.prototype.toString.call(target)==='[object Object]'?target:this.parent;if(typeof this.context==='object')this.context.parent=this.parent;if(!target){return [";
-					},
-					'each': function(a, options){
-						return "(function(){this.context=this.parent;return this.context['" + a + "']"+ (options||"") +".map(function(context, index, array){this.context=context;this.context.parent=this.parent;this.context['@index']=index;this.context['@first']=index==0;this.context['@last']=index==array.length-1;return [";
-					},
-					'partial': function(a, options){
-						options = a.split(' ');
-						var partial = options[0],
-							context = options[1],
-							params = options.slice(2);
-
-						if(context && context.indexOf('=') > -1){
-							params.push(context);
-							context = null;
-						}
-						// Convert parameters
-						params = ['{', params.map(function(param){
-							param = param.split('=');
-							return [param[0], ":", param[1], ','].join('')
-						}), '}'].join('');
-
-						return partials[partial] + (context ? "(this.context['"+context+"'],":"(this.context,") + params + ")";
-					}
-				};
+				if(expression.indexOf('{{/') > -1){
+					return ']})';
+				}
 
 				// Parse
 				expression = expression
@@ -4667,12 +4648,15 @@ module.exports = Hyperbars = (function(Hyperbars){
 					.replace('{{>', '{{#partial');
 
 				var whitespace = expression.indexOf(' '),
-					operation = expression.slice(3, whitespace),
-					value = expression.slice(whitespace + 1, expression.indexOf('}}')),
-					dot = value.indexOf('.'),
-					options = value.slice(dot);
-
-				return $ops[operation](dot != -1?value.slice(0, dot):value, dot != -1?options:null);
+					fn = expression.slice(3, whitespace),
+					value = expression.slice(whitespace + 1, expression.indexOf('}}'));
+				return [
+					'Runtime.',
+					fn,
+					'(',
+					(value.indexOf('parent') == 0 ? value : value[0] == "@" ? "options['"+value+"']" : "context['"+value+"']"),
+					', context, function(context, parent, options){return ['
+				].join('');
 			};
 
 			/**
@@ -4711,24 +4695,18 @@ module.exports = Hyperbars = (function(Hyperbars){
 			 * @param node
 			 */
 			var toJavaScript = function(node){
-				var children = node.children,
-					attributes = node.attributes;
-
-				// recursively convert children to javascript
-				if(children && children.length){
-					var _children = [];
-					children.forEach(function(child){
-						child = toJavaScript(child);
-						_children.push(child);
-					});
-					node.children = '['+_children.join()+']';
+				if(node.children && node.children.length){
+					node.children = [
+						'[', node.children.map(toJavaScript).join(','), ']'
+					].join('')
 				}
 
-				// Handle attributes
-				if(attributes){
-					node.attributes = ['{', Object.keys(attributes).map(function(name){
-						return [string2js(name), attrs2js(attributes[name])].join(':')
-					}).join(','), '}'].join('');
+				if(node.attributes){
+					node.attributes = [
+						'{',
+						Object.keys(node.attributes).map(function(name){ return [string2js(name), attrs2js(node.attributes[name])].join(':') }).join(','),
+						'}'
+					].join('')
 				}
 
 				if(node.type == 'text'){
@@ -4745,22 +4723,18 @@ module.exports = Hyperbars = (function(Hyperbars){
 				}
 			};
 
-			// Parse handlebar template using htmlparser2
-			var parsed = parse(template);
+			// Parse handlebar template using htmlparser
+			var parsed = parse(template)[0];
 
-			// Convert parsed html tree to javascript
-			var js = parsed.map(toJavaScript)[0];
-
-			// Base function - extend with all children
-			js = ['(function(state){this.context={};for(var i=0;i<arguments.length;i++){for(var a in arguments[i]){this.context[a]=arguments[i][a]}}return [', js, '][0]}.bind({}))'].join('');
-
-			// Helps debug issue's - include the output of this in github issues to help me out ;-)
-			if(options.debug || this.debug){
-				console.log(js);
-			}
+			// Convert to hyperscript
+			var fn = [
+				'(function(state){var Runtime = Hyperbars.Runtime;var context = state;return ',
+				toJavaScript(parsed),
+				'}.bind({}))'
+			].join('');
 
 			// function is currently a string so eval it and return it
-			return options.raw ? js : eval(js);
+			return options.raw ? fn : eval(fn);
 		},
 
 		/**
@@ -4773,13 +4747,29 @@ module.exports = Hyperbars = (function(Hyperbars){
 		'htmlparser': htmlparser
 	};
 
+	Hyperbars.Runtime = {
+		'if': function(context, parent, callback){
+			if(!!context) return callback(isObject(context)?context:parent, parent)
+		},
+		'unless': function(context, parent, callback){
+			if(!context) return callback(isObject(context)?context:parent, parent)
+		},
+		'each': function(context, parent, callback){
+			return context.map(function (item, index, array) {
+				var options = {};
+				options['@index'] = index;
+				options['@first'] = index == 0;
+				options['@last'] = index == array.length - 1;
+				return callback(item, parent, options)
+			})
+		}
+	};
+
 	return new Hyperbars();
 
 })(function(){
-		this.partialDirectory = '/partials';
-		this.debug = false;
-		this.partials = {};
-	});
+
+});
 
 },{"htmlparser2":32,"virtual-dom/create-element":37,"virtual-dom/diff":38,"virtual-dom/h":39,"virtual-dom/patch":40}],65:[function(require,module,exports){
 'use strict'
