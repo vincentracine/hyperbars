@@ -4575,12 +4575,32 @@ module.exports = Hyperbars = (function(Hyperbars){
 				.replace(/\t/g, '');
 
 			/**
+			 * Injects a pre-compiled partial into the code-generation procedure
+			 * @param string handlebar partial expression body
+			 * @returns {string}
+			 */
+			var injectPartial = function(string){
+				var regex = /([\S]+="[^"]*")/g,
+					parameters = string.split(regex),
+					headers = parameters[0].split(' ').slice(1);
+				// Partial context setup
+				if(headers[1]){
+					var context = block2js(headers[1]);
+					if(context.indexOf("''+") == 0) context = context.slice(3);
+				}
+				// Partial parameters setup
+				parameters = parameters.slice(1).filter(function(s){ return !!s.trim() }).map(function(s){ return s.replace('="',':"')});
+				return partials[headers[0]] + "(Runtime.merge" + (context ? "(" + context: "(context") + (parameters.length ? ",{"+parameters.join(',')+"}))" : "))");
+			};
+
+			/**
 			 * Returns a formatted string in javascript format based on handlebar expression
 			 * @param string
 			 */
 			var block2js = function(string){
 				if(string == "this") return 'context';
 				if(string[0] == '@') return "options['"+string+"']";
+				if(string[0] == '>') return injectPartial(string);
 				var sanitised = string.replace(/(this).?/, '').replace(/..\//g,'parent.');
 				// Do not encode HTML
 				if(sanitised[0] == "{"){
@@ -4644,8 +4664,7 @@ module.exports = Hyperbars = (function(Hyperbars){
 				// Parse
 				expression = expression
 					.replace(/(this).?/, '')
-					.replace(/..\//g,'parent.')
-					.replace('{{>', '{{#partial');
+					.replace(/..\//g,'parent.');
 
 				var whitespace = expression.indexOf(' '),
 					fn = expression.slice(3, whitespace),
@@ -4678,7 +4697,7 @@ module.exports = Hyperbars = (function(Hyperbars){
 			 * @returns {boolean}
 			 */
 			var isHandlebarExpression = function(string){
-				return string.indexOf('{{#') > -1 || string.indexOf('{{/') > -1 || string.indexOf('{{>') > -1
+				return string.indexOf('{{#') > -1 || string.indexOf('{{/') > -1
 			};
 
 			/**
@@ -4762,15 +4781,33 @@ module.exports = Hyperbars = (function(Hyperbars){
 				options['@last'] = index == array.length - 1;
 				return callback(item, parent, options)
 			})
+		},
+		/**
+		 * credit: http://stackoverflow.com/a/8625261/5678694
+		 */
+		'merge': function(){
+			var obj = {},
+				i = 0,
+				il = arguments.length,
+				key;
+			for (; i < il; i++) {
+				for (key in arguments[i]) {
+					if (arguments[i].hasOwnProperty(key)) {
+						obj[key] = arguments[i][key];
+					}
+				}
+			}
+			return obj;
 		}
 	};
 
 	return new Hyperbars();
 
 })(function(){
-
+	this.partialDirectory = '/partials';
+	this.debug = false;
+	this.partials = {};
 });
-
 },{"htmlparser2":32,"virtual-dom/create-element":37,"virtual-dom/diff":38,"virtual-dom/h":39,"virtual-dom/patch":40}],65:[function(require,module,exports){
 'use strict'
 
