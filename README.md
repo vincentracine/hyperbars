@@ -102,6 +102,9 @@ Step 2: Use it in your Handlebars template
 
 To view more on partials please visit see [handlebars partials](http://handlebarsjs.com/partials.html).
 
+## v0.1.4
+* Fixed windows line-break bug
+
 ## v0.1.1
 * Output is much more readable
 * Fixed partial parameter bug
