@@ -38,6 +38,7 @@ test('Compile html only', function(){
 	var html = "<div>Hello world</div>";
 	var expect = "<div>Hello world</div>";
 	var compiled = Hyperbars.compile(html);
+	console.log(Hyperbars.compile(html, {raw:true}));
 	return htmlOf(compiled) == expect;
 });
 test('Compile html only with attributes', function(){
@@ -138,14 +139,14 @@ test('{{else}}', function(){
 	return htmlOf(compiled, state) == expect;
 });
 test('basic partials without context', function(){
-	Hyperbars.partials['nav'] = Hyperbars.compile('<nav>Navbar</nav>', {raw: true});
+	Hyperbars.partials['nav'] = Hyperbars.compile('<nav>Navbar</nav>', {raw:true});
 	var html = '<header>{{> nav}}</header>';
 	var expect = '<header><nav>Navbar</nav></header>';
 	var compiled = Hyperbars.compile(html);
 	return htmlOf(compiled) == expect;
 });
 test('basic partials with default context', function(){
-	Hyperbars.partials['nav'] = Hyperbars.compile('<nav>{{title}}</nav>', {raw: true});
+	Hyperbars.partials['nav'] = Hyperbars.compile('<nav>{{title}}</nav>', {raw:true});
 	var html = '<header>{{> nav}}</header>';
 	var expect = '<header><nav>Navbar</nav></header>';
 	var state = {title:'Navbar'};
@@ -153,7 +154,7 @@ test('basic partials with default context', function(){
 	return htmlOf(compiled, state) == expect;
 });
 test('basic partials with custom context', function(){
-	Hyperbars.partials['nav'] = Hyperbars.compile('<nav>{{name}}</nav>', {raw: true});
+	Hyperbars.partials['nav'] = Hyperbars.compile('<nav>{{name}}</nav>', {raw:true});
 	var html = '<header>{{> nav profile}}</header>';
 	var expect = '<header><nav>Foo Bar</nav></header>';
 	var state = {profile:{ name: "Foo Bar" }};
@@ -161,7 +162,7 @@ test('basic partials with custom context', function(){
 	return htmlOf(compiled, state) == expect;
 });
 test('basic partials with parameters', function(){
-	Hyperbars.partials['nav'] = Hyperbars.compile('<nav>My name is {{name}} and im {{age}} years old.</nav>', {raw: true});
+	Hyperbars.partials['nav'] = Hyperbars.compile('<nav>My name is {{name}} and im {{age}} years old.</nav>', {raw:true});
 	var html = '<header>{{> nav name="Foo Bar" age="99"}}</header>';
 	var expect = '<header><nav>My name is Foo Bar and im 99 years old.</nav></header>';
 	var compiled = Hyperbars.compile(html);

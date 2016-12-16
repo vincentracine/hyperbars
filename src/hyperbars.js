@@ -1,5 +1,5 @@
 /**
- * Hyperbars version 0.1.0
+ * Hyperbars version 0.1.4
  *
  * Copyright (c) 2016 Vincent Racine
  * @license MIT
@@ -8,7 +8,6 @@ module.exports = Hyperbars = (function(Hyperbars){
 
 	'use strict';
 
-	//var h, diff, patch, createElement, htmlparser;
 	var h = require('virtual-dom/h'),
 		diff = require('virtual-dom/diff'),
 		patch = require('virtual-dom/patch'),
@@ -127,6 +126,7 @@ module.exports = Hyperbars = (function(Hyperbars){
 			options = options || {};
 			options.debug = options.debug || false;
 			options.raw = options.raw || false;
+			options.cache = options.cache || true;
 
 			// Remove special characters
 			template = template.replace(/> </g, '><')
@@ -143,7 +143,12 @@ module.exports = Hyperbars = (function(Hyperbars){
 			var injectPartial = function(string){
 				var regex = /([\S]+="[^"]*")/g,
 					parameters = string.split(regex),
-					headers = parameters[0].split(' ').slice(1);
+					headers = parameters[0].split(' ').slice(1),
+					partial = partials[headers[0]];
+
+				if(!partial)
+					throw new Error('Partial "' + headers[0] + '" is missing. Please add it to Hyperbars.partials.');
+
 				// Partial context setup
 				if(headers[1]){
 					var context = block2js(headers[1]);
@@ -151,7 +156,7 @@ module.exports = Hyperbars = (function(Hyperbars){
 				}
 				// Partial parameters setup
 				parameters = parameters.slice(1).filter(function(s){ return !!s.trim() }).map(function(s){ return s.replace('="',':"')});
-				return partials[headers[0]] + "(Runtime.merge" + (context ? "(" + context: "(context") + (parameters.length ? ",{"+parameters.join(',')+"}))" : "))");
+				return partial.toString() + "(Runtime.merge" + (context ? "(" + context: "(context") + (parameters.length ? ",{"+parameters.join(',')+"}))" : "))");
 			};
 
 			/**
@@ -312,6 +317,13 @@ module.exports = Hyperbars = (function(Hyperbars){
 				toJavaScript(parsed),
 				'}.bind({}))'
 			].join('');
+
+			// Remove those pesky line-breaks!
+			fn = fn.replace(/(\r\n|\n|\r)/gm,"");
+
+			if(options.debug || this.debug){
+				console.log(fn);
+			}
 
 			// function is currently a string so eval it and return it
 			return options.raw ? fn : eval(fn);

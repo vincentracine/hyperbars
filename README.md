@@ -1,6 +1,7 @@
 # Hyperbars
 Compile [Handlebars](http://handlebarsjs.com/) templates to javascript which can be used with [Virtual DOM](https://github.com/Matt-Esch/virtual-dom).
-This library offer a comprehensive coverage of the Handlebars API and more features will be added soon. Your Handlebar templates will work out of the box.
+This library offers a comprehensive coverage of the Handlebars API and more features will be added soon. Your [Handlebars](http://handlebarsjs.com/) templates 
+should work correctly without any modifications. 
 
 Compiles something like this:
 ```html
@@ -57,10 +58,10 @@ state.name = "Baz Bar"
 // Generate new tree based on new state
 var newTree = compiled(state)
 
-// Find sets required to update real DOM so it is identical to virtual dom
+// Find changes required to update real DOM so it is identical to virtual dom
 var patches = Hyperbars.diff(tree, newTree)
 
-// Update real DOM
+// Apply the changes
 Hyperbars.patch(element, patches)
 
 // Cache new tree
@@ -69,21 +70,21 @@ tree = newTree
 **Note:** It is best practice to create a function called "setState(newState)" which performs step 3.
 
 ## Partials
-Currently only basic partials are supported. Please refer to the change log below for scope of what is support
-with partials. I will be adding more and more coverage of the Handlebars partials API soon.
+Currently only basic partials are supported. Please refer to the change log below for the scope of what is supported
+with partials. I will be adding more coverage of the Handlebars partials API soon.
 
 Step 1: Register partial with Hyperbars
 ```js
 Hyperbars.partials['myPartial'] = Hyperbars.compile('<nav>{{title}}</nav>', {raw: true})
 ```
+**Note:** Notice the use of `{raw: true}` when compiling the partial. This will return a string rather then the compiled function.
 
-Step 2: Use it in your template
+Step 2: Use it in your Handlebars template
 ```html
 <body>
     {{> myPartial}}
 </body>
 ```
-**Note:** Notice the use of `{raw: true}` when compiling the partial. This will return the compiled function in string format
 
 ### Injecting a context
 ```html
