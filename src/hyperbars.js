@@ -167,17 +167,25 @@ module.exports = Hyperbars = (function(Hyperbars){
 				if(string == "this") return 'context';
 				if(string[0] == '@') return "options['"+string+"']";
 				if(string[0] == '>') return injectPartial(string);
-				var sanitised = string.replace(/(this).?/, '').replace(/..\//g,'parent.');
+				var sanitised = string.replace(/(this).?/, '').replace(/..\//g,'parent.'),
+					options = "";
+
+				if(string.indexOf('.') > -1 && string.indexOf('..') == -1){
+					var dot = sanitised.indexOf('.');
+					options = sanitised.slice(dot);
+					sanitised = sanitised.slice(0, dot);
+				}
+
 				// Do not encode HTML
 				if(sanitised[0] == "{"){
 					sanitised = sanitised.slice(1);
 					return [
 						"h('div',{'innerHTML':",
-						"''+" + (sanitised.indexOf('parent') == 0 ? sanitised : "context['"+sanitised+"']"),
+						"''+" + (sanitised.indexOf('parent') == 0 ? sanitised : "context['"+sanitised+"']" + options),
 						"}, [])"
 					].join('');
 				}
-				return "''+" + (sanitised.indexOf('parent') == 0 ? sanitised : "context['"+sanitised+"']");
+				return "''+" + (sanitised.indexOf('parent') == 0 ? sanitised : "context['"+sanitised+"']" + options);
 			};
 
 			/**

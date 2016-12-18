@@ -54,6 +54,13 @@ test('Compile handlebar template', function(){
 	var compiled = Hyperbars.compile(html);
 	return htmlOf(compiled, state) == expect;
 });
+test('Access properties of arrays', function(){
+	var html = '<div>{{names.length}}</div>';
+	var expect = '<div>2</div>';
+	var state = {names: ["Foo Bar", "Biz Boo"]};
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled, state) == expect;
+});
 test('#if is true', function(){
 	var html = '<div>{{#if bool}}Hello!{{/if}}</div>';
 	var expect = '<div>Hello!</div>';
