@@ -102,6 +102,10 @@ Step 2: Use it in your Handlebars template
 
 To view more on partials please visit see [handlebars partials](http://handlebarsjs.com/partials.html).
 
+## v0.1.7
+* Added support for expressions in parameters
+* Added support for multiple blocks in parameters
+
 ## v0.1.4
 * Fixed windows line-break bug
 

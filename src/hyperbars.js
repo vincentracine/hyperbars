@@ -1,5 +1,5 @@
 /**
- * Hyperbars version 0.1.5
+ * Hyperbars version 0.1.7
  *
  * Copyright (c) 2016 Vincent Racine
  * @license MIT
@@ -242,7 +242,7 @@ module.exports = Hyperbars = (function(Hyperbars){
 
 				var whitespace = expression.indexOf(' '),
 					fn = expression.slice(3, whitespace),
-					value = expression.slice(whitespace + 1, expression.indexOf('}}'));
+					value = expression.match(/ [^\s}]*/)[0].trim();
 				return [
 					'Runtime.',
 					fn,
@@ -258,11 +258,11 @@ module.exports = Hyperbars = (function(Hyperbars){
 			 * @returns {string}
 			 */
 			var attrs2js = function(attribute){
-				if(isHandlebarBlock(attribute)){
-					return string2js(attribute);
-				}else{
-					return  "'" + attribute + "'";
-				}
+				var blocks = attribute.split(/({{[^{}]+)}}/g);
+				blocks = blocks.map(function(block){
+					return isHandlebarExpression(block) ? expression2js(block) : block.indexOf('{{') > -1 ? block2js(block.slice(2)) : "'"+block+"'"
+				}).join('+');
+				return blocks.replace(/\[\+/g, "[").replace(/\[''\+/g, "[").replace(/\+['']*\]/g, "]");
 			};
 
 			/**
@@ -349,10 +349,12 @@ module.exports = Hyperbars = (function(Hyperbars){
 
 	Hyperbars.Runtime = {
 		'if': function(context, parent, callback){
-			if(!!context) return callback(isObject(context)?context:parent, parent)
+			if(!!context) return callback(isObject(context)?context:parent, parent);
+			return "";
 		},
 		'unless': function(context, parent, callback){
-			if(!context) return callback(isObject(context)?context:parent, parent)
+			if(!context) return callback(isObject(context)?context:parent, parent);
+			return "";
 		},
 		'each': function(context, parent, callback){
 			return context.map(function (item, index, array) {
@@ -385,7 +387,6 @@ module.exports = Hyperbars = (function(Hyperbars){
 	return new Hyperbars();
 
 })(function(){
-	this.partialDirectory = '/partials';
 	this.debug = false;
 	this.partials = {};
 });

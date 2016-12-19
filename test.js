@@ -38,7 +38,6 @@ test('Compile html only', function(){
 	var html = "<div>Hello world</div>";
 	var expect = "<div>Hello world</div>";
 	var compiled = Hyperbars.compile(html);
-	console.log(Hyperbars.compile(html, {raw:true}));
 	return htmlOf(compiled) == expect;
 });
 test('Compile html only with attributes', function(){
@@ -138,13 +137,6 @@ test('../ context change', function(){
 	var compiled = Hyperbars.compile(html);
 	return htmlOf(compiled, state) == expect;
 });
-test('{{else}}', function(){
-	var html = '<div>{{#if profile}}{{else}}No profile{{/if}}</div>';
-	var expect = '<div>No profile</div>';
-	var state = {profile: null};
-	var compiled = Hyperbars.compile(html);
-	return htmlOf(compiled, state) == expect;
-});
 test('basic partials without context', function(){
 	Hyperbars.partials['nav'] = Hyperbars.compile('<nav>Navbar</nav>', {raw:true});
 	var html = '<header>{{> nav}}</header>';
@@ -174,6 +166,24 @@ test('basic partials with parameters', function(){
 	var expect = '<header><nav>My name is Foo Bar and im 99 years old.</nav></header>';
 	var compiled = Hyperbars.compile(html);
 	return htmlOf(compiled) == expect;
+});
+test('Element properties concat', function(){
+	var html = '<a href="/{{folder}}/{{name}}.html" class="link"><div class="bg-{{name}}-full">{{folder}}</div></a>';
+	var expect = '<a href="/pages/home.html" class="link"><div class="bg-home-full">pages</div></a>';
+	var state = { name:'home', folder: 'pages' };
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled, state) == expect;
+});
+test('Element properties with handlebars expressions', function(){
+	var html = '<a href="/{{folder}}/{{#if enabled}}home{{/if}}{{#unless enabled}}error{{/unless}}.html" class="link"></a>';
+	var expect = '<a href="/pages/home.html" class="link"></a>';
+	var state = { name:'home', folder: 'pages', enabled: true };
+	var compiled = Hyperbars.compile(html);
+	var test1 = htmlOf(compiled, state) == expect;
+	state.enabled = false;
+	expect = '<a href="/pages/error.html" class="link"></a>';
+	var test2 = htmlOf(compiled, state) == expect;
+	return test1 && test2;
 });
 
 console.log("Passed: " + ("" + passed).green, "| Failed: " + ("" + failed)[failed > 0 ? "red" : "green"]);
