@@ -1,5 +1,5 @@
 /**
- * Hyperbars version 0.1.7
+ * Hyperbars version 0.1.8
  *
  * Copyright (c) 2016 Vincent Racine
  * @license MIT
@@ -242,13 +242,17 @@ module.exports = Hyperbars = (function(Hyperbars){
 
 				var whitespace = expression.indexOf(' '),
 					fn = expression.slice(3, whitespace),
-					value = expression.match(/ [^\s}]*/)[0].trim();
+					parsed = expression.match(/ [^\s}]*/)[0].trim(),
+					path = parsed.split("."),
+					root = path[0],
+					options = path.slice(1).join('.'),
+					parent = path.slice(1).slice(0, -1).join('.');
 				return [
-					'Runtime.',
+					"Runtime.",
 					fn,
-					'(',
-					(value.indexOf('parent') == 0 ? value : value[0] == "@" ? "options['"+value+"']" : "context['"+value+"']"),
-					', context, function(context, parent, options){return ['
+					"(",
+					(root == "parent" ? root : root[0] == "@" ? "options['"+root+"']" + (!!options ? "." + options:"") : "context['"+root+"']" + (!!options ? "." + options:"")),
+					", " + (!!options ? "context['"+root+"']" + (!!parent ? "." + parent:"") : "context") + ", function(context, parent, options){return ["
 				].join('');
 			};
 
@@ -279,7 +283,7 @@ module.exports = Hyperbars = (function(Hyperbars){
 			 * @param string
 			 * @returns {boolean}
 			 */
-			var isHandlebarBlock= function(string){
+			var isHandlebarBlock = function(string){
 				return string.indexOf('{{') > -1 && string.indexOf('}}') > -1
 			};
 
@@ -291,7 +295,7 @@ module.exports = Hyperbars = (function(Hyperbars){
 				if(node.children && node.children.length){
 					node.children = [
 						'[', node.children.map(toJavaScript).join(','), ']'
-					].join('')
+					].join('').replace(/return \[,/g, "return [").replace(/,\]}\)\]/g, "]})]");
 				}
 
 				if(node.attributes){

@@ -60,6 +60,20 @@ test('Access properties of arrays', function(){
 	var compiled = Hyperbars.compile(html);
 	return htmlOf(compiled, state) == expect;
 });
+test('Access properties of an object', function(){
+	var html = '<div>{{profile.username}}</div>';
+	var expect = '<div>Test</div>';
+	var state = {profile: {username: "Test"}};
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled, state) == expect;
+});
+test('Access properties context change', function(){
+	var html = '<div>{{#if profile.options}}{{enabled}}{{/if}}</div>';
+	var expect = '<div>true</div>';
+	var state = {profile: {options: {enabled: true}}};
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled, state) == expect;
+});
 test('#if is true', function(){
 	var html = '<div>{{#if bool}}Hello!{{/if}}</div>';
 	var expect = '<div>Hello!</div>';

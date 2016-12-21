@@ -4438,7 +4438,7 @@ function isArray(obj) {
 
 },{}],64:[function(require,module,exports){
 /**
- * Hyperbars version 0.1.5
+ * Hyperbars version 0.1.8
  *
  * Copyright (c) 2016 Vincent Racine
  * @license MIT
@@ -4681,13 +4681,17 @@ module.exports = Hyperbars = (function(Hyperbars){
 
 				var whitespace = expression.indexOf(' '),
 					fn = expression.slice(3, whitespace),
-					value = expression.slice(whitespace + 1, expression.indexOf('}}'));
+					parsed = expression.match(/ [^\s}]*/)[0].trim(),
+					path = parsed.split("."),
+					root = path[0],
+					options = path.slice(1).join('.'),
+					parent = path.slice(1).slice(0, -1).join('.');
 				return [
-					'Runtime.',
+					"Runtime.",
 					fn,
-					'(',
-					(value.indexOf('parent') == 0 ? value : value[0] == "@" ? "options['"+value+"']" : "context['"+value+"']"),
-					', context, function(context, parent, options){return ['
+					"(",
+					(root == "parent" ? root : root[0] == "@" ? "options['"+root+"']" + (!!options ? "." + options:"") : "context['"+root+"']" + (!!options ? "." + options:"")),
+					", " + (!!options ? "context['"+root+"']" + (!!parent ? "." + parent:"") : "context") + ", function(context, parent, options){return ["
 				].join('');
 			};
 
@@ -4697,11 +4701,11 @@ module.exports = Hyperbars = (function(Hyperbars){
 			 * @returns {string}
 			 */
 			var attrs2js = function(attribute){
-				if(isHandlebarBlock(attribute)){
-					return string2js(attribute);
-				}else{
-					return  "'" + attribute + "'";
-				}
+				var blocks = attribute.split(/({{[^{}]+)}}/g);
+				blocks = blocks.map(function(block){
+					return isHandlebarExpression(block) ? expression2js(block) : block.indexOf('{{') > -1 ? block2js(block.slice(2)) : "'"+block+"'"
+				}).join('+');
+				return blocks.replace(/\[\+/g, "[").replace(/\[''\+/g, "[").replace(/\+['']*\]/g, "]");
 			};
 
 			/**
@@ -4718,7 +4722,7 @@ module.exports = Hyperbars = (function(Hyperbars){
 			 * @param string
 			 * @returns {boolean}
 			 */
-			var isHandlebarBlock= function(string){
+			var isHandlebarBlock = function(string){
 				return string.indexOf('{{') > -1 && string.indexOf('}}') > -1
 			};
 
@@ -4730,7 +4734,7 @@ module.exports = Hyperbars = (function(Hyperbars){
 				if(node.children && node.children.length){
 					node.children = [
 						'[', node.children.map(toJavaScript).join(','), ']'
-					].join('')
+					].join('').replace(/return \[,/g, "return [").replace(/,\]}\)\]/g, "]})]");
 				}
 
 				if(node.attributes){
@@ -4788,10 +4792,12 @@ module.exports = Hyperbars = (function(Hyperbars){
 
 	Hyperbars.Runtime = {
 		'if': function(context, parent, callback){
-			if(!!context) return callback(isObject(context)?context:parent, parent)
+			if(!!context) return callback(isObject(context)?context:parent, parent);
+			return "";
 		},
 		'unless': function(context, parent, callback){
-			if(!context) return callback(isObject(context)?context:parent, parent)
+			if(!context) return callback(isObject(context)?context:parent, parent);
+			return "";
 		},
 		'each': function(context, parent, callback){
 			return context.map(function (item, index, array) {
@@ -4824,7 +4830,6 @@ module.exports = Hyperbars = (function(Hyperbars){
 	return new Hyperbars();
 
 })(function(){
-	this.partialDirectory = '/partials';
 	this.debug = false;
 	this.partials = {};
 });
