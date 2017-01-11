@@ -40,9 +40,21 @@ test('Compile html only', function(){
 	var compiled = Hyperbars.compile(html);
 	return htmlOf(compiled) == expect;
 });
+test('Text single quote escaping', function(){
+	var html = "<div>They're saying Hello World</div>";
+	var expect = "<div>They're saying Hello World</div>";
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled) == expect;
+});
 test('Compile html only with attributes', function(){
 	var html = '<div class="example">Hello world</div>';
 	var expect = '<div class="example">Hello world</div>';
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled) == expect;
+});
+test('Single quote escaping in parameters', function(){
+	var html = '<div data-text="' + "They're running"+'">Hello World</div>';
+	var expect = '<div data-text="' + "They're running"+'">Hello World</div>';
 	var compiled = Hyperbars.compile(html);
 	return htmlOf(compiled) == expect;
 });

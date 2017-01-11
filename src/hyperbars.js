@@ -1,5 +1,5 @@
 /**
- * Hyperbars version 0.1.8
+ * Hyperbars version 0.1.9
  *
  * Copyright (c) 2016 Vincent Racine
  * @license MIT
@@ -73,7 +73,7 @@ module.exports = Hyperbars = (function(Hyperbars){
 				text.forEach(function(text){
 					var node = {
 						type: 'text',
-						content: text
+						content: text.replace(/'/g, "\\'")
 					};
 					if(current){
 						current.children.push(node);
@@ -262,6 +262,7 @@ module.exports = Hyperbars = (function(Hyperbars){
 			 * @returns {string}
 			 */
 			var attrs2js = function(attribute){
+				attribute = attribute.replace(/'/g, "\\'");
 				var blocks = attribute.split(/({{[^{}]+)}}/g);
 				blocks = blocks.map(function(block){
 					return isHandlebarExpression(block) ? expression2js(block) : block.indexOf('{{') > -1 ? block2js(block.slice(2)) : "'"+block+"'"
