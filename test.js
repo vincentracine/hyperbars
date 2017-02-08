@@ -186,12 +186,20 @@ test('basic partials with custom context', function(){
 	var compiled = Hyperbars.compile(html);
 	return htmlOf(compiled, state) == expect;
 });
-test('basic partials with parameters', function(){
+test('basic partials with static parameters', function(){
 	Hyperbars.partials['nav'] = Hyperbars.compile('<nav>My name is {{name}} and im {{age}} years old.</nav>', {raw:true});
 	var html = '<header>{{> nav name="Foo Bar" age="99"}}</header>';
 	var expect = '<header><nav>My name is Foo Bar and im 99 years old.</nav></header>';
 	var compiled = Hyperbars.compile(html);
 	return htmlOf(compiled) == expect;
+});
+test('basic partials with parameters', function(){
+	Hyperbars.partials['nav'] = Hyperbars.compile('<nav>My name is {{message}}.</nav>', {raw:true});
+	var html = '<header>{{> nav message=name}}</header>';
+	var expect = '<header><nav>My name is Foo Bar.</nav></header>';
+	var state = {name: "Foo Bar" };
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled, state) == expect;
 });
 test('Element properties concat', function(){
 	var html = '<a href="/{{folder}}/{{name}}.html" class="link"><div class="bg-{{name}}-full">{{folder}}</div></a>';
