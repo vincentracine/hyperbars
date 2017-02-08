@@ -1,5 +1,5 @@
 /**
- * Hyperbars version 0.1.9
+ * Hyperbars version 0.1.10
  *
  * Copyright (c) 2016 Vincent Racine
  * @license MIT

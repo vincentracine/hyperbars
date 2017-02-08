@@ -4438,7 +4438,7 @@ function isArray(obj) {
 
 },{}],64:[function(require,module,exports){
 /**
- * Hyperbars version 0.1.9
+ * Hyperbars version 0.1.10
  *
  * Copyright (c) 2016 Vincent Racine
  * @license MIT
@@ -4581,7 +4581,7 @@ module.exports = Hyperbars = (function(Hyperbars){
 			 */
 			var injectPartial = function(string){
 				var regex = /([\S]+="[^"]*")/g,
-					parameters = string.split(regex),
+					parameters = string.split(regex).filter(Boolean),
 					headers = parameters[0].split(' ').slice(1),
 					partial = partials[headers[0]];
 
@@ -4590,11 +4590,21 @@ module.exports = Hyperbars = (function(Hyperbars){
 
 				// Partial context setup
 				if(headers[1]){
-					var context = block2js(headers[1]);
-					if(context.indexOf("''+") == 0) context = context.slice(3);
+					var context;
+					if(headers[1].indexOf('=') > -1){
+						context = "context";
+						var parameter = headers[1].split('='),
+							parsed = block2js(parameter[1]);
+						if(parsed.indexOf("''+") == 0) parsed = parsed.slice(3);
+						parameters.push(parameter[0] + "=" + parsed);
+					}else{
+						context = block2js(headers[1]);
+						if(context.indexOf("''+") == 0) context = context.slice(3);
+					}
 				}
+
 				// Partial parameters setup
-				parameters = parameters.slice(1).filter(function(s){ return !!s.trim() }).map(function(s){ return s.replace('="',':"')});
+				parameters = parameters.slice(1).filter(function(s){ return !!s.trim() }).map(function(s){ return s.replace('=',':')});
 				return partial.toString() + "(Runtime.merge" + (context ? "(" + context: "(context") + (parameters.length ? ",{"+parameters.join(',')+"}))" : "))");
 			};
 

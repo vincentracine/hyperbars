@@ -102,6 +102,9 @@ Step 2: Use it in your Handlebars template
 
 To view more on partials please visit see [handlebars partials](http://handlebarsjs.com/partials.html).
 
+## v0.1.10
+* Fixed partial parameter bug
+
 ## v0.1.9
 * Fixed single quote error
 
