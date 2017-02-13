@@ -4438,7 +4438,7 @@ function isArray(obj) {
 
 },{}],64:[function(require,module,exports){
 /**
- * Hyperbars version 0.1.10
+ * Hyperbars version 0.1.11
  *
  * Copyright (c) 2016 Vincent Racine
  * @license MIT
@@ -4696,11 +4696,12 @@ module.exports = Hyperbars = (function(Hyperbars){
 					root = path[0],
 					options = path.slice(1).join('.'),
 					parent = path.slice(1).slice(0, -1).join('.');
+
 				return [
 					"Runtime.",
 					fn,
 					"(",
-					(root == "parent" ? root : root[0] == "@" ? "options['"+root+"']" + (!!options ? "." + options:"") : "context['"+root+"']" + (!!options ? "." + options:"")),
+					(root == "parent" ? root + (!!options ? "." + options:"") : root[0] == "@" ? "options['"+root+"']" + (!!options ? "." + options:"") : "context['"+root+"']" + (!!options ? "." + options:"")),
 					", " + (!!options ? "context['"+root+"']" + (!!parent ? "." + parent:"") : "context") + ", function(context, parent, options){return ["
 				].join('');
 			};
