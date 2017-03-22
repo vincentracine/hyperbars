@@ -102,6 +102,34 @@ Step 2: Use it in your Handlebars template
 
 To view more on partials please visit see [handlebars partials](http://handlebarsjs.com/partials.html).
 
+## Helpers
+Hyperbars helpers are slightly different from the helpers found in Handlebars. 
+
+Step 1: Register helper with Hyperbars. Always return and empty string if nothing should be displayed. The callback
+function has three arguments `callback(newContext, parentContext, options)`.
+```js
+Hyperbars.registerHelper('equals', function(context, expression, callback){
+	if(expression.value.left === expression.value.right){
+		return callback(expression.value.left, context, {});
+	}
+	return "";
+});
+```
+
+Step 2: Use the helper in your template. In this example `value.left` is equal to `count` and `value.right` is equal
+to `"5"`. If your expression does not have a `=` sign then `value` is simply equal to the context property specified.
+```html
+<div>
+    {{#equals count="5"}}
+        <p>You won with a count of {{this}}!</p>
+    {{/if}}
+</div>
+```
+
+## v0.1.2
+* Added helpers!
+* Fixed context issues
+
 ## v0.1.10
 * Fixed partial parameter bug
 

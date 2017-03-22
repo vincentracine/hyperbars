@@ -1,5 +1,5 @@
 /**
- * Hyperbars version 0.1.11
+ * Hyperbars version 0.1.2
  *
  * Copyright (c) 2016 Vincent Racine
  * @license MIT
@@ -106,6 +106,13 @@ module.exports = Hyperbars = (function(Hyperbars){
 			patch = obj.patch;
 			createElement = obj.createElement;
 			htmlparser = obj.htmlparser;
+		},
+
+		/**
+		 * Register helpers
+		 */
+		'registerHelper': function(name, handler){
+			Hyperbars.Runtime[name] = handler;
 		},
 
 		/**
@@ -250,20 +257,40 @@ module.exports = Hyperbars = (function(Hyperbars){
 					.replace(/(this).?/, '')
 					.replace(/..\//g,'parent.');
 
+				// Function extraction
 				var whitespace = expression.indexOf(' '),
-					fn = expression.slice(3, whitespace),
-					parsed = expression.match(/ [^\s}]*/)[0].trim(),
-					path = parsed.split("."),
-					root = path[0],
-					options = path.slice(1).join('.'),
-					parent = path.slice(1).slice(0, -1).join('.');
+					fn = expression.slice(3, whitespace);
 
+				// Attribute extraction
+				var regex = /([\S]+="[^"]*")/g,
+					parameters = expression
+						.substring(whitespace, expression.length)
+						.replace('}}', '')
+						.split(regex)
+						.filter(function(string){return !!string && string != " "})
+						.map(function(string){
+							if(string.indexOf("=") > -1){
+								var s = string.trim().split("=");
+								s[0] = block2js(s[0]);
+								if(s[1][0] != '"' && s[1].slice(-1) != '"'){
+									s[1] = block2js(s[1]);
+									if(s[1].indexOf("''+") == 0){
+										s[1] = s[1].slice(3);
+									}
+								}
+								return `{ left: ${s[0]}, right: ${s[1]} }`;
+							}else{
+								string = block2js(string.trim());
+								if(string.indexOf("''+") == 0){
+									string = string.slice(3);
+								}
+								return string;
+							}
+						});
 				return [
 					"Runtime.",
 					fn,
-					"(",
-					(root == "parent" ? root + (!!options ? "." + options:"") : root[0] == "@" ? "options['"+root+"']" + (!!options ? "." + options:"") : "context['"+root+"']" + (!!options ? "." + options:"")),
-					", " + (!!options ? "context['"+root+"']" + (!!parent ? "." + parent:"") : "context") + ", function(context, parent, options){return ["
+					"(context, " + "{ value: " + parameters + " }" + ", function(context, parent, options){return ["
 				].join('');
 			};
 
@@ -364,21 +391,25 @@ module.exports = Hyperbars = (function(Hyperbars){
 	};
 
 	Hyperbars.Runtime = {
-		'if': function(context, parent, callback){
-			if(!!context) return callback(isObject(context)?context:parent, parent);
+		'if': function(context, expression, callback){
+			if(expression.value){
+				return callback(isObject(expression.value) ? expression.value : context, context);
+			}
 			return "";
 		},
-		'unless': function(context, parent, callback){
-			if(!context) return callback(isObject(context)?context:parent, parent);
+		'unless': function(context, expression, callback){
+			if(!expression.value){
+				return callback(isObject(expression.value) ? expression.value : context, context);
+			}
 			return "";
 		},
-		'each': function(context, parent, callback){
-			return context.map(function (item, index, array) {
+		'each': function(context, expression, callback){
+			return expression.value.map(function (item, index, array) {
 				var options = {};
 				options['@index'] = index;
 				options['@first'] = index == 0;
 				options['@last'] = index == array.length - 1;
-				return callback(item, parent, options)
+				return callback(item, context, options)
 			})
 		},
 		/**

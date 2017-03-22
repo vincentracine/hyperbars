@@ -5,7 +5,7 @@
  * @license MIT
  */
 
-var Hyperbars = require('./src/hyperbars'),
+var Hyperbars = require('./src/hyperbars.js'),
 	h = require('virtual-dom/h'),
 	diff = require('virtual-dom/diff'),
 	patch = require('virtual-dom/patch'),
@@ -128,6 +128,13 @@ test('#each and context', function(){
 	var compiled = Hyperbars.compile(html);
 	return htmlOf(compiled, state) == expect;
 });
+test('#if -> #each -> context', function(){
+	var html = '<div>{{#if profiles.length}}<div>{{#each profiles}}<p>{{name}}</p>{{/each}}</div>{{/if}}</div>';
+	var expect = '<div><div><p>AAA</p><p>BBB</p><p>CCC</p></div></div>';
+	var state = {profiles: [{name:"AAA"},{name:"BBB"},{name:"CCC"}]};
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled, state) == expect;
+});
 test('@index', function(){
 	var html = '<div>{{#each array}}<p>{{@index}}</p>{{/each}}</div>';
 	var expect = '<div><p>0</p><p>1</p><p>2</p></div>';
@@ -218,6 +225,13 @@ test('Element properties with handlebars expressions', function(){
 	expect = '<a href="/pages/error.html" class="link"></a>';
 	var test2 = htmlOf(compiled, state) == expect;
 	return test1 && test2;
+});
+test('Output HTML', function(){
+	var html = '<div>{{{html}}}</div>';
+	var expect = '<div><div><h1>Hello World</h1></div></div>';
+	var state = { html:"<h1>Hello World</h1>" };
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled, state) == expect;
 });
 
 console.log("Passed: " + ("" + passed).green, "| Failed: " + ("" + failed)[failed > 0 ? "red" : "green"]);
