@@ -141,13 +141,13 @@ Hyperbars.registerHelper('hello', function(context, parameters, callback){
 });
 ```
 
-Would would, of course, render `{{hello name="World"}}` as `Hello, world!`.
+Would would, of course, render `{{hello name="World"}}` as `Hello, World!`.
 
 Note that you CAN mix positional and named parameters in the same helper call.
 
 So, `{{hello name="world" "foo" "bar"}}` would give `parameters` like `{name:"world", 0:"foo",1:"bar",length:2}`.
 
-Note that this means that the `parameters` parameter is both traditional object (keys = values) and an "Array-like" object, suitable for use with `Array.from(parameters)` to convert it to a proper Array that you can use with `.map()`, etc.
+Note that this means that the `parameters` parameter is both a traditional object (keys = values) and an "Array-like" object, suitable for use with `Array.from(parameters)` to convert it to a proper Array that you can use with `.map()`, etc.
 
 ## v0.1.2
 * Added helpers!
