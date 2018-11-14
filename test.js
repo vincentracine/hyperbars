@@ -305,6 +305,16 @@ test('Non-block helper - named params {{hello name="world"}}', function(){
 	var compiled = Hyperbars.compile(html);
 	return htmlOf(compiled) == expect;
 });
+test('Non-block helper - named params and string concat {{hello name="world"}}', function(){
+	Hyperbars.registerHelper('hello', function(context, expression, callback){
+		return callback("Hello, " + expression.name + "!", context, {});
+	});
+
+	var html   = "<div>{{hello name=\"world\"}}</div>";
+	var expect = "<div>Hello, world!</div>";
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled) == expect;
+});
 test('Non-block helper - positional params {{hello "world"}}', function(){
 	Hyperbars.registerHelper('hello', function(context, expression, callback){
 		if(!expression.length)
