@@ -271,7 +271,8 @@ module.exports = Hyperbars = (function(Hyperbars){
 					fn         = match[0];
 
 				// Attribute extraction
-				var regex = /([\S]+="[^"]*")/g,
+				let unnamedParameterCount = 0;
+				var regex = /([\S]+(?:=["']?[^"\s]*['"]?)?)/g,
 					parameters = expression
 						.substring(3 + fn.length, expression.length)
 						.replace('}}', '')
@@ -280,35 +281,41 @@ module.exports = Hyperbars = (function(Hyperbars){
 						.map(function(string){
 							if(string.indexOf("=") > -1){
 								var s = string.trim().split("=");
-								s[0] = block2js(s[0]);
-								if(s[1][0] != '"' && s[1].slice(-1) != '"'){
-									s[1] = block2js(s[1]);
-									if(s[1].indexOf("''+") == 0){
-										s[1] = s[1].slice(3);
+								s[1] = s[1].replace(/\\\'/g,"'"); // de-esape single quotes
+								if((s[1][0] != '"' && s[1].slice(-1) != '"') &&
+							 	   (s[1][0] != "'" && s[1].slice(-1) != "'")){
+									if(isNaN(s[1]+0) && s[1] !== 'true' && s[1] !== 'false') {
+										s[1] = block2js(s[1]);
+										if(s[1].indexOf("''+") == 0){
+											s[1] = s[1].slice(3);
+										}
 									}
 								}
-								return `{ left: ${s[0]}, right: ${s[1]} }`;
+								return `${s[0]}: ${s[1]}`;
 							}else{
-								string = block2js(string.trim());
-								if(string.indexOf("''+") == 0){
-									string = string.slice(3);
+								string = string.trim();
+								string = string.replace(/\\\'/g,"'"); // de-esape single quotes
+								if((string[0] != '"' && string.slice(-1) != '"') &&
+							 	   (string[0] != "'" && string.slice(-1) != "'")){
+									if(isNaN(string+0) && string !== 'true' && string !== 'false') {
+										string = block2js(string);
+										if(string.indexOf("''+") == 0){
+											string = string.slice(3);
+										}
+									}
 								}
-								return string;
+								return `${unnamedParameterCount ++}: ${string}`;
 							}
 						});
 
-				// If no attributes were present, we must give a null value
-				// to maintain valid js syntax
-				if(parameters.length == 0) {
-					parameters = ["null"];
-				}
+				parameters.push(`length: ${unnamedParameterCount}`);
 
 				// Function call syntax changed to handle helper names that aren't
 				// valid javascript variable names, e.x. "hello-world"
 				return [
 					"Runtime['",
 					fn.replace(/'/g, '\\\''),
-					"'](context, " + "{ value: " + parameters + " }" + ", function(context, parent, options){return ["
+					"'](context, " + "{ " + parameters.join(', ') + " }" + ", function(context, parent, options){return ["
 				].join('');
 			};
 
@@ -455,23 +462,23 @@ module.exports = Hyperbars = (function(Hyperbars){
 
 	Hyperbars.Runtime = {
 		'if': function(context, expression, callback){
-			if(expression.value){
-				return callback(isObject(expression.value) ? expression.value : context, context);
+			if(expression[0]){
+				return callback(isObject(expression[0]) ? expression[0] : context, context);
 			}
 			return "";
 		},
 		'unless': function(context, expression, callback){
-			if(!expression.value){
-				return callback(isObject(expression.value) ? expression.value : context, context);
+			if(!expression[0]){
+				return callback(isObject(expression[0]) ? expression[0] : context, context);
 			}
 			return "";
 		},
 		'each': function(context, expression, callback){
-			return expression.value.map(function (item, index, array) {
+			return expression[0].map(function (item, index, array) {
 				var options = {};
 				options['@index'] = index;
 				options['@first'] = index == 0;
-				options['@last'] = index == array.length - 1;
+				options['@last']  = index == array.length - 1;
 				return callback(item, context, options)
 			})
 		},
