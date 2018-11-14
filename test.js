@@ -2,6 +2,7 @@
  * Hyperbars tests
  *
  * Copyright (c) 2016 Vincent Racine
+ * Added tests for new cases, 2018 Josiah Bryan
  * @license MIT
  */
 
@@ -232,6 +233,60 @@ test('Output HTML', function(){
 	var state = { html:"<h1>Hello World</h1>" };
 	var compiled = Hyperbars.compile(html);
 	return htmlOf(compiled, state) == expect;
+});
+test('Block helper {{#equals count="5"}}...{{/equals}}', function(){
+	Hyperbars.registerHelper('equals', function(context, expression, callback){
+		if(expression.value.left === expression.value.right){
+			return callback(expression.value.left, context, {});
+		}
+		return "";
+	});
+	var html   = "<div>{{#equals count=\"5\"}}<p>You won with a count of {{this}}!</p>{{/if}}</div>";
+	var expect = "<div><p>You won with a count of 5!</p></div>";
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled, { count: 5 }) == expect;
+	return match;
+});
+test('Non-block helper {{hello}}', function(){
+	Hyperbars.registerHelper('hello', function(context, expression, callback){
+		return callback("world", context, {});
+	});
+
+	var html   = "<div>Hello {{hello}}!</div>";
+	var expect = "<div>Hello world!</div>";
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled) == expect;
+});
+test('Non-javascript helper names {{hello-world}}', function(){
+	Hyperbars.registerHelper('hello-world', function(context, expression, callback){
+		return callback("Hello, world", context, {});
+	});
+
+	var html   = "<div>{{hello-world}}!</div>";
+	var expect = "<div>Hello, world!</div>";
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled) == expect;
+});
+test('Partial tree special-cased from helper callback', function(){
+	Hyperbars.registerHelper('hello-world', function(context, expression, callback){
+		return callback({ h: [ 'div', {'id': 'myid' }, [] ] }, context, {});
+	});
+
+	var html   = "<div>{{hello-world}}</div>";
+	var expect = "<div><div id=\"myid\"></div></div>";
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled) == expect;
+});
+
+test('Raw html special-cased from helper callback', function(){
+	Hyperbars.registerHelper('hello-world', function(context, expression, callback){
+		return callback({ html: "<div id=\"myid\"></div>" }, context, {});
+	});
+
+	var html   = "<div>{{hello-world}}</div>";
+	var expect = "<div><div><div id=\"myid\"></div></div></div>";
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled) == expect;
 });
 
 console.log("Passed: " + ("" + passed).green, "| Failed: " + ("" + failed)[failed > 0 ? "red" : "green"]);
