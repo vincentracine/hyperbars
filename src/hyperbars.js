@@ -252,6 +252,7 @@ module.exports = Hyperbars = (function(Hyperbars){
 			 * @param expression
 			 * @returns {*}
 			 */
+			var parsedExpressionCounter = 0; // for _identity
 			var expression2js = function(expression){
 				if(expression.indexOf('{{/') > -1){
 					return ']})';
@@ -315,7 +316,7 @@ module.exports = Hyperbars = (function(Hyperbars){
 				return [
 					"Runtime['",
 					fn.replace(/'/g, '\\\''),
-					"'](context, " + "{ " + parameters.join(', ') + " }" + ", function(context, parent, options){return ["
+					"'](context, " + "{ " + parameters.join(', ') + ", _identity: '_" + (parsedExpressionCounter ++) + '_' + Date.now () + "' }" + ", function(context, parent, options){return ["
 				].join('');
 			};
 
