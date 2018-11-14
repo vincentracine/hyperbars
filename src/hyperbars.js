@@ -293,7 +293,7 @@ module.exports = Hyperbars = (function(Hyperbars){
 								if(string.indexOf("''+") == 0){
 									string = string.slice(3);
 								}
-								return string.trim() ? string : "null";
+								return string;
 							}
 						});
 
