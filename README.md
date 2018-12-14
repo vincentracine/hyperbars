@@ -1,7 +1,7 @@
 # Hyperbars
 Compile [Handlebars](http://handlebarsjs.com/) templates to javascript which can be used with [Virtual DOM](https://github.com/Matt-Esch/virtual-dom).
-This library offers a comprehensive coverage of the Handlebars API and more features will be added soon. Your [Handlebars](http://handlebarsjs.com/) templates 
-should work correctly without any modifications. 
+This library offers a comprehensive coverage of the Handlebars API and more features will be added soon. Your [Handlebars](http://handlebarsjs.com/) templates
+should work correctly without any modifications.
 
 Compiles something like this:
 ```html
@@ -103,28 +103,51 @@ Step 2: Use it in your Handlebars template
 To view more on partials please visit see [handlebars partials](http://handlebarsjs.com/partials.html).
 
 ## Helpers
-Hyperbars helpers are slightly different from the helpers found in Handlebars. 
+Hyperbars helpers are slightly different from the helpers found in Handlebars.
 
 Step 1: Register helper with Hyperbars. Always return and empty string if nothing should be displayed. The callback
 function has three arguments `callback(newContext, parentContext, options)`.
 ```js
-Hyperbars.registerHelper('equals', function(context, expression, callback){
-	if(expression.value.left === expression.value.right){
-		return callback(expression.value.left, context, {});
+Hyperbars.registerHelper('equals', function(context, parameters, callback){
+	if(parameters[0] === parameters[1]){
+		return callback(parameters[1], context, {});
 	}
 	return "";
 });
 ```
 
-Step 2: Use the helper in your template. In this example `value.left` is equal to `count` and `value.right` is equal
-to `"5"`. If your expression does not have a `=` sign then `value` is simply equal to the context property specified.
+Step 2: Use the helper in your template. In this example `parameters[0]` is equal to `count` and `parameters[1]` is equal
+to `5`.
 ```html
 <div>
-    {{#equals count="5"}}
+    {{#equals count 5}}
         <p>You won with a count of {{this}}!</p>
     {{/if}}
 </div>
 ```
+It is important to note that the `parameters` argument an "Array-like" object, suitable for use with `Array.from(parameters)` to convert it to a proper Array that you can use with `.map()`, etc. It is not an array by itself - it also has key/value pairs, as illustrated below.
+
+### Named Parameters
+
+Named parameters for helpers are supported naturally via the second `parameters` argument. For example:
+
+```html
+{{hello name="World"}}
+```
+Would correspond to:
+```js
+Hyperbars.registerHelper('hello', function(context, parameters, callback){
+	return callback("Hello, " + parameters.name + "!", context, {});
+});
+```
+
+Would would, of course, render `{{hello name="World"}}` as `Hello, World!`.
+
+Note that you CAN mix positional and named parameters in the same helper call.
+
+So, `{{hello name="world" "foo" "bar"}}` would give `parameters` like `{name:"world", 0:"foo",1:"bar",length:2}`.
+
+Note that this means that the `parameters` parameter is both a traditional object (keys = values) and an "Array-like" object, suitable for use with `Array.from(parameters)` to convert it to a proper Array that you can use with `.map()`, etc.
 
 ## v0.1.2
 * Added helpers!

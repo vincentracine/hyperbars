@@ -2,6 +2,7 @@
  * Hyperbars tests
  *
  * Copyright (c) 2016 Vincent Racine
+ * Added tests for new cases, 2018 Josiah Bryan
  * @license MIT
  */
 
@@ -232,6 +233,145 @@ test('Output HTML', function(){
 	var state = { html:"<h1>Hello World</h1>" };
 	var compiled = Hyperbars.compile(html);
 	return htmlOf(compiled, state) == expect;
+});
+test('Block helper - positional params {{#equals count 5}}...{{/equals}}', function(){
+	Hyperbars.registerHelper('equals', function(context, expression, callback){
+		if(expression[0] == expression[1]){
+			return callback(expression[1], context, {});
+		}
+		return "";
+	});
+	var html   = "<div>{{#equals count 5}}<p>You won with a count of {{this}}!</p>{{/if}}</div>";
+	var expect = "<div><p>You won with a count of 5!</p></div>";
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled, { count: 5 }) == expect;
+});
+test('Block helper - named params {{#equals left=count right=5}}...{{/equals}}', function(){
+	Hyperbars.registerHelper('equals', function(context, expression, callback){
+		// console.log('{{equals}}', { context, expression });
+		if(expression.left == expression.right){
+			return callback(expression.right, context, {});
+		}
+		return "";
+	});
+	var html   = "<div>{{#equals left=count right=5}}<p>You won with a count of {{this}}!</p>{{/if}}</div>";
+	var expect = "<div><p>You won with a count of 5!</p></div>";
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled, { count: 5 }) == expect;
+});
+test('Block helper - mixed named and positional params {{#equals count is=5}}...{{/equals}}', function(){
+	Hyperbars.registerHelper('equals', function(context, expression, callback){
+		// console.log('{{equals}}', { context, expression });
+		if(expression[0] == expression.is){
+			return callback(expression.is, context, {});
+		}
+		return "";
+	});
+	var html   = "<div>{{#equals count is=5}}<p>You won with a count of {{this}}!</p>{{/if}}</div>";
+	var expect = "<div><p>You won with a count of 5!</p></div>";
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled, { count: 5 }) == expect;
+});
+test('Block helper - quoted {{#equals count is="5"}}...{{/equals}}', function(){
+	Hyperbars.registerHelper('equals', function(context, expression, callback){
+		// console.log('{{equals}}', { context, expression });
+		if(expression[0] == expression.is){
+			return callback(expression.is, context, {});
+		}
+		return "";
+	});
+	var html   = "<div>{{#equals count is='5'}}<p>You won with a count of {{this}}!</p>{{/if}}</div>";
+	var expect = "<div><p>You won with a count of 5!</p></div>";
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled, { count: 5 }) == expect;
+});
+test('Non-block helper {{hello}}', function(){
+	Hyperbars.registerHelper('hello', function(context, expression, callback){
+		return callback("world", context, {});
+	});
+
+	var html   = "<div>Hello {{hello}}!</div>";
+	var expect = "<div>Hello world!</div>";
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled) == expect;
+});
+test('Non-block helper - named params {{hello name="world"}}', function(){
+	Hyperbars.registerHelper('hello', function(context, expression, callback){
+		return callback(expression.name, context, {});
+	});
+
+	var html   = "<div>Hello {{hello name=\"world\"}}!</div>";
+	var expect = "<div>Hello world!</div>";
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled) == expect;
+});
+test('Non-block helper - named params and string concat {{hello name="world"}}', function(){
+	Hyperbars.registerHelper('hello', function(context, expression, callback){
+		return callback("Hello, " + expression.name + "!", context, {});
+	});
+
+	var html   = "<div>{{hello name=\"world\"}}</div>";
+	var expect = "<div>Hello, world!</div>";
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled) == expect;
+});
+test('Non-block helper - positional params {{hello "world"}}', function(){
+	Hyperbars.registerHelper('hello', function(context, expression, callback){
+		if(!expression.length)
+			return "";
+		return callback(expression[0] || {}, context, {});
+	});
+
+	var html   = "<div>Hello {{hello 'world'}}!</div>";
+	var expect = "<div>Hello world!</div>";
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled) == expect;
+});
+test('Non-block helper - true/false positional params {{does true false}}', function(){
+	Hyperbars.registerHelper('does', function(context, expression, callback){
+		return callback(Array.from(expression).join('!='), context, {});
+	});
+
+	var html   = "<div>Yes, {{does true false}}</div>";
+	var expect = "<div>Yes, true!=false</div>";
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled) == expect;
+
+	// console.log("Raw fn:", Hyperbars.compile(html, { raw: true }).toString(), "\n");
+	// const got = htmlOf(compiled, {});
+	// console.log({got, expect});
+	// return got == expect;
+});
+test('Non-javascript helper names {{hello-world}}', function(){
+	Hyperbars.registerHelper('hello-world', function(context, expression, callback){
+		return callback("Hello, world", context, {});
+	});
+
+	var html   = "<div>{{hello-world}}!</div>";
+	var expect = "<div>Hello, world!</div>";
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled) == expect;
+});
+test('Partial tree special-cased from helper callback', function(){
+	Hyperbars.registerHelper('hello-world', function(context, expression, callback){
+		return callback({ h: [ 'div', {'id': 'myid' }, [] ] }, context, {});
+	});
+
+	var html   = "<div>{{hello-world}}</div>";
+	var expect = "<div><div id=\"myid\"></div></div>";
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled) == expect;
+});
+
+test('Raw html special-cased from helper callback', function(){
+	Hyperbars.registerHelper('hello-world', function(context, expression, callback){
+		return callback({ html: "<div id=\"myid\"></div>" }, context, {});
+	});
+
+	var html   = "<div>{{hello-world}}</div>";
+	var expect = "<div><div><div id=\"myid\"></div></div></div>";
+	var compiled = Hyperbars.compile(html);
+	return htmlOf(compiled) == expect;
 });
 
 console.log("Passed: " + ("" + passed).green, "| Failed: " + ("" + failed)[failed > 0 ? "red" : "green"]);

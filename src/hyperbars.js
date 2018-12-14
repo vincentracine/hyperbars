@@ -2,6 +2,11 @@
  * Hyperbars version 0.1.2
  *
  * Copyright (c) 2016 Vincent Racine
+ * Updated 2018 Josiah Bryan <josiahbryan@gmail.com>
+ * - Support for non-block helpers - ex {{current-time}}
+ * - Support for helper names that aren't valid javascript variable names (e.x. "url-for")
+ * - Support for helpers without arguments
+ * - Support for special-case context values from non-block helpers {h: [...]} and {html:""} - see test cases
  * @license MIT
  */
 module.exports = Hyperbars = (function(Hyperbars){
@@ -247,6 +252,7 @@ module.exports = Hyperbars = (function(Hyperbars){
 			 * @param expression
 			 * @returns {*}
 			 */
+			var parsedExpressionCounter = 0; // for _identity
 			var expression2js = function(expression){
 				if(expression.indexOf('{{/') > -1){
 					return ']})';
@@ -258,39 +264,59 @@ module.exports = Hyperbars = (function(Hyperbars){
 					.replace(/..\//g,'parent.');
 
 				// Function extraction
-				var whitespace = expression.indexOf(' '),
-					fn = expression.slice(3, whitespace);
+				// This rewrite of the previous form of whitespace detection was
+				// necessary to handle helpers that don't have any attributes.
+				const exprEnd  = expression.indexOf('}}'),
+					exprBody   = expression.slice(3, exprEnd),
+					match      = /([^\s]+)/.exec(exprBody), // grab function name even if no whitespace, e.g. {{#hello-world}}
+					fn         = match[0];
 
 				// Attribute extraction
-				var regex = /([\S]+="[^"]*")/g,
+				let unnamedParameterCount = 0;
+				var regex = /([\S]+(?:=["']?[^"\s]*['"]?)?)/g,
 					parameters = expression
-						.substring(whitespace, expression.length)
+						.substring(3 + fn.length, expression.length)
 						.replace('}}', '')
 						.split(regex)
 						.filter(function(string){return !!string && string != " "})
 						.map(function(string){
 							if(string.indexOf("=") > -1){
 								var s = string.trim().split("=");
-								s[0] = block2js(s[0]);
-								if(s[1][0] != '"' && s[1].slice(-1) != '"'){
-									s[1] = block2js(s[1]);
-									if(s[1].indexOf("''+") == 0){
-										s[1] = s[1].slice(3);
+								s[1] = s[1].replace(/\\\'/g,"'"); // de-esape single quotes
+								if((s[1][0] != '"' && s[1].slice(-1) != '"') &&
+							 	   (s[1][0] != "'" && s[1].slice(-1) != "'")){
+									if(isNaN(s[1]+0) && s[1] !== 'true' && s[1] !== 'false') {
+										s[1] = block2js(s[1]);
+										if(s[1].indexOf("''+") == 0){
+											s[1] = s[1].slice(3);
+										}
 									}
 								}
-								return `{ left: ${s[0]}, right: ${s[1]} }`;
+								return `${s[0]}: ${s[1]}`;
 							}else{
-								string = block2js(string.trim());
-								if(string.indexOf("''+") == 0){
-									string = string.slice(3);
+								string = string.trim();
+								string = string.replace(/\\\'/g,"'"); // de-esape single quotes
+								if((string[0] != '"' && string.slice(-1) != '"') &&
+							 	   (string[0] != "'" && string.slice(-1) != "'")){
+									if(isNaN(string+0) && string !== 'true' && string !== 'false') {
+										string = block2js(string);
+										if(string.indexOf("''+") == 0){
+											string = string.slice(3);
+										}
+									}
 								}
-								return string;
+								return `${unnamedParameterCount ++}: ${string}`;
 							}
 						});
+
+				parameters.push(`length: ${unnamedParameterCount}`);
+
+				// Function call syntax changed to handle helper names that aren't
+				// valid javascript variable names, e.x. "hello-world"
 				return [
-					"Runtime.",
-					fn,
-					"(context, " + "{ value: " + parameters + " }" + ", function(context, parent, options){return ["
+					"Runtime['",
+					fn.replace(/'/g, '\\\''),
+					"'](context, " + "{ " + parameters.join(', ') + ", _identity: '_" + (parsedExpressionCounter ++) + '_' + Date.now () + "' }" + ", function(context, parent, options){return ["
 				].join('');
 			};
 
@@ -309,13 +335,33 @@ module.exports = Hyperbars = (function(Hyperbars){
 			};
 
 			/**
-			 * True is the argument contains handlebar expression
+			 * True if the argument contains handlebar expression
 			 * @param string
 			 * @returns {boolean}
 			 */
 			var isHandlebarExpression = function(string){
-				return string.indexOf('{{#') > -1 || string.indexOf('{{/') > -1
+				return string.indexOf('{{#') > -1 || string.indexOf('{{/') > -1;
 			};
+
+			/**
+			 * Returns true if the expression is a non-block helper
+			 * @param string
+			 * @returns {boolean}}
+			 */
+			var isNonBlockHelper = function(string) {
+				if(isHandlebarExpression(string))
+					return false;
+
+				// Blocks and end-block caught above, now test for custom helper
+				const match = /{{([^\s}]+)/.exec(string);
+				if(!match)
+					return false;
+
+				if(Hyperbars.Runtime[match[1]])
+					return true;
+
+				return false;
+			}
 
 			/**
 			 * True is the argument contains handlebar expression
@@ -346,6 +392,31 @@ module.exports = Hyperbars = (function(Hyperbars){
 				}
 
 				if(node.type == 'text'){
+					if(isNonBlockHelper(node.content)) {
+						// Non-block helpers look like variables from context, for example:
+						// {{hello-world}}
+						// We confirm that this is a helper, not a variable, by checking
+						// if "hello-world" is registered in Hyperbars.Runtime. If so,
+						// we trick expression2js into parsing them as the opening of a block heler.
+						// This next statement almost the same thing as rewriting:
+						// {{hello-world}}
+						// as
+						// {{#hello-world}}{{{this}}}{{/hello-world}}
+						// Assuming that Hyperbars.registerHelper('hello-world',...) has been called before .compile()
+						return [
+							expression2js(node.content.replace('{{','{{#')), //
+							// Special-case context.h to allow returning partial trees as args to h(),
+							// for example: callback({h: [ 'div', {'id': 'myid' }, [] ]}, ...)
+							"context.h ? h(...context.h) : ",
+							// Special-case context.html to allow returning raw html,
+							// for example: callback({html:"<whatever>...</whatever>"}, ...)
+							"context.html ? h('div', {'innerHTML':'' + context.html}, []) : ",
+							// Generic catch-all to stringify context as return value,
+							// for example: callback("hello world", ...)
+							"context",
+							"]})",
+						].join('');
+					} else
 					// Deal with handlebar expressions in text
 					if(isHandlebarExpression(node.content)){
 						return expression2js(node.content);
@@ -392,23 +463,23 @@ module.exports = Hyperbars = (function(Hyperbars){
 
 	Hyperbars.Runtime = {
 		'if': function(context, expression, callback){
-			if(expression.value){
-				return callback(isObject(expression.value) ? expression.value : context, context);
+			if(expression[0]){
+				return callback(isObject(expression[0]) ? expression[0] : context, context);
 			}
 			return "";
 		},
 		'unless': function(context, expression, callback){
-			if(!expression.value){
-				return callback(isObject(expression.value) ? expression.value : context, context);
+			if(!expression[0]){
+				return callback(isObject(expression[0]) ? expression[0] : context, context);
 			}
 			return "";
 		},
 		'each': function(context, expression, callback){
-			return expression.value.map(function (item, index, array) {
+			return expression[0].map(function (item, index, array) {
 				var options = {};
 				options['@index'] = index;
 				options['@first'] = index == 0;
-				options['@last'] = index == array.length - 1;
+				options['@last']  = index == array.length - 1;
 				return callback(item, context, options)
 			})
 		},
